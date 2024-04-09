@@ -8,7 +8,6 @@
 #include <logging.hpp>
 #include <vecmath.hpp>
 #include <util.hpp>
-#include <lodepng.h>
 #include <glBuffer.hpp>
 
 void catchOpenGLerr(const char* file, int line);

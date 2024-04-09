@@ -25,13 +25,9 @@
 #include <random>
 #include <ranges>
 #include <logging.hpp>
-#include <slot_map.h>
 #include <queue>
 
 namespace fs = std::filesystem;
-
-// 32-bit slot map
-template <typename T> using SlotMap = dod::slot_map32<T>;
 
 // Singleton pattern wrapper
 template <typename TClass> struct Singleton

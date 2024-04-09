@@ -1,5 +1,4 @@
 #include <mesh.hpp>
-#include <tiny_obj_loader.h>
 
 const drawable::VertexAttrMap Mesh::_vertAttrInfo = {
     { "vPos", { 3u, offsetof(VertexData, position), GL_FLOAT } },
@@ -38,47 +37,7 @@ Mesh::Mesh(const std::vector<VertexData>& vertexData, GLuint _renderType)
 
 Mesh::Mesh(fs::path modelPath) : Mesh()
 {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string err;
-    std::string fileNameStr = modelPath.string();
-    const char* fileName = fileNameStr.c_str();
-    this->label = modelPath.filename().string();
-
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fileName, nullptr, true);
-    $assert(ret, "Error loading model from {}:\n{}", modelPath.string(), err);
-
-    size_t totalVertices = 0u;
-    size_t totalFaces = 0u;
-    for (const tinyobj::shape_t& shape : shapes) {
-        totalVertices += shape.mesh.indices.size();
-        totalFaces += shape.mesh.num_face_vertices.size();
-    }
-    this->vertArr.reserve(totalVertices);
-    this->elemArr.reserve(totalFaces * 3u);
-
-    // Create a patch for each shape, then try to split it
-    for (size_t s = 0; s < shapes.size(); s++) {
-        // Get degree and vertex indices for each face
-        size_t idxOffset = 0;
-        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
-            size_t numVerts = size_t(shapes[s].mesh.num_face_vertices[f]);
-            $assert(numVerts == 3u, "Only triangular faces are supported");
-
-            // Loop over vertices in the face.
-            for (size_t v = 0; v < numVerts; v++) {
-                this->elemArr.push_back(shapes[s].mesh.indices[idxOffset + v].vertex_index);
-            }
-
-            idxOffset += numVerts;
-        }
-
-        // Create Vector3 vertices from flat array
-        for (size_t v = 0; v < attrib.vertices.size() / 3; v++) {
-            this->vertArr.emplace_back(VertexData{ Map<Vector3f>(&attrib.vertices[3 * v]) });
-        }
-    }
+    
 }
 
 Mesh Mesh::clone() const
@@ -86,8 +45,6 @@ Mesh Mesh::clone() const
     Mesh m;
     m.vertArr = this->vertArr;
     m.elemArr = this->elemArr;
-    m.transform = this->transform;
-    m.dirty = true;
     return m;
 }
 

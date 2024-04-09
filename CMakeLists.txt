@@ -81,6 +81,5 @@ target_link_libraries(app PUBLIC
     ${OPENGL_LIBRARIES}
     spdlog
     Eigen3::Eigen
-    slot_map
     imgui
 )

@@ -36,11 +36,6 @@ int main(int argc, char const* argv[])
     bool gladLoaded = gladLoadGL(glfwGetProcAddress);
     $assert(gladLoaded, "Failed to initialize GLAD");
 
-// Some debug testing
-#ifdef BUILD_DEBUG
-    testing();
-#endif
-
     // Begin the application loop!
     App app(window);
     float t = 0.0f;
