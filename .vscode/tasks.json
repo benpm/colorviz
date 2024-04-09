@@ -1,0 +1,96 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cmake",
+			"label": "CMake: build",
+			"command": "build",
+			"targets": [
+				"all"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": [
+				"$msCompile",
+				"$gcc"
+			],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": true
+			},
+			"icon": {
+				"light": "resources/light/build.svg",
+				"dark": "resources/dark/build.svg"
+			},
+			"detail": "CMake template build task",
+			"dependsOn": [
+				"Clear console"
+			]
+		},
+		{
+			"type": "cmake",
+			"label": "CMake: configure",
+			"command": "configure",
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": true
+			},
+			"icon": {
+				"light": "resources/light/configure.svg",
+				"dark": "resources/dark/configure.svg"
+			},
+			"detail": "CMake template configure task"
+		},
+		// Submodule update
+		{
+			"type": "shell",
+			"label": "Update submodules",
+			"command": "git submodule update --init --recursive",
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"clear": true
+			},
+			"icon": {
+				"light": "resources/light/git.svg",
+				"dark": "resources/dark/git.svg"
+			},
+			"detail": "Update submodules"
+		},
+		//Task that will clear console
+		{
+			"type": "shell",
+			"label": "Clear console",
+			"command": "clear",
+			"problemMatcher": [],
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": true
+			},
+			"icon": {
+				"light": "resources/light/clear.svg",
+				"dark": "resources/dark/clear.svg"
+			},
+			"detail": "Clear console"
+		}
+	]
+}
