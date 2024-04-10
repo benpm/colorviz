@@ -1,0 +1,26 @@
+BasedOnStyle: Chromium
+IndentWidth: 4
+IndentPPDirectives: BeforeHash
+InsertBraces: true
+AlignAfterOpenBracket: BlockIndent
+AlwaysBreakTemplateDeclarations: MultiLine
+FixNamespaceComments: false
+NamespaceIndentation: All
+ColumnLimit: 100
+SortIncludes: false
+AllowAllArgumentsOnNextLine: true
+Cpp11BracedListStyle: false
+
+BraceWrapping:
+  AfterClass:      true
+  AfterControlStatement: false
+  AfterEnum:       true
+  AfterFunction:   true
+  AfterNamespace:  true
+  AfterObjCDeclaration: true
+  AfterStruct:     true
+  AfterUnion:      true
+  BeforeCatch:     false
+  BeforeElse:      false
+  IndentBraces:    false
+BreakBeforeBraces: Custom

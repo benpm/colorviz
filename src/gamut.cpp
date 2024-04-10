@@ -1,91 +1,70 @@
 #include <gamut.hpp>
 
-// Function to parse a single line of data
-std::vector<std::string> parseLine(const std::string &line) {
-  std::stringstream ss(line);
-  std::string token;
-  std::vector<std::string> tokens;
-  while (std::getline(ss, token, ' ')) {
-    tokens.push_back(token);
-  }
-  return tokens;
+std::vector<std::string> parseLine(const std::string& line)
+{
+    std::stringstream ss(line);
+    std::string token;
+    std::vector<std::string> tokens;
+    while (std::getline(ss, token, ' ')) {
+        tokens.push_back(token);
+    }
+    return tokens;
 }
 
-// Function to parse a double value from a string
-double parseDouble(const std::string &str) {
-  try {
-    return std::stod(str);
-  } catch (const std::invalid_argument &e) {
-    // Handle invalid double format
-    return std::numeric_limits<double>::quiet_NaN();
-  }
-}
+enum class GamutSection
+{
+    header,
+    vertices,
+    triangle_header,
+    triangles
+};
 
-// Function to parse a GamutVertex from a line
-GamutVertex parseVertex(const std::vector<std::string> &tokens) {
-  if (tokens.size() < 4) {
-    // Handle invalid vertex format
-    return {std::numeric_limits<double>::quiet_NaN(),
-            std::numeric_limits<double>::quiet_NaN(),
-            std::numeric_limits<double>::quiet_NaN()};
-  }
-  return {parseDouble(tokens[1]), parseDouble(tokens[2]),
-          parseDouble(tokens[3])};
-}
+std::shared_ptr<GamutData> readGamutData(const std::string& filepath)
+{
+    std::ifstream file(filepath);
+    assert(file.is_open());
 
-// Function to parse data based on keyword (can be extended for other data
-// types)
-bool parseDataLine(const std::vector<std::string> &tokens, GamutData &data) {
-  if (tokens[0] == "DESCRIPTOR") {
-    data.descriptor = tokens[1];
-    for (size_t i = 2; i < tokens.size(); ++i) {
-      data.descriptor += " " + tokens[i];
+    std::shared_ptr<GamutData> data = std::make_shared<GamutData>();
+    std::string line;
+    GamutSection section = GamutSection::header;
+    while (std::getline(file, line)) {
+        std::vector<std::string> tokens = parseLine(line);
+        if (tokens.empty()) {
+            continue;
+        }
+        switch (section) {
+            case GamutSection::header:
+                if (tokens[0] == "BEGIN_DATA") {
+                    section = GamutSection::vertices;
+                }
+                break;
+            case GamutSection::vertices:
+                if (tokens.size() == 4) {
+                    data->vertices.push_back({
+                        std::stof(tokens[1]),
+                        std::stof(tokens[2]),
+                        std::stof(tokens[3]),
+                    });
+                } else if (tokens[0] == "END_DATA") {
+                    section = GamutSection::triangle_header;
+                }
+                break;
+            case GamutSection::triangle_header:
+                if (tokens[0] == "BEGIN_DATA") {
+                    section = GamutSection::triangles;
+                }
+                break;
+            case GamutSection::triangles:
+                if (tokens.size() == 3) {
+                    data->triangles.push_back({
+                        (uint32_t)std::stoul(tokens[0]),
+                        (uint32_t)std::stoul(tokens[1]),
+                        (uint32_t)std::stoul(tokens[2]),
+                    });
+                }
+                break;
+        }
     }
-  } else if (tokens[0] == "ORIGINATOR") {
-    data.originator = tokens[1];
-    for (size_t i = 2; i < tokens.size(); ++i) {
-      data.originator += " " + tokens[i];
-    }
-  } else if (tokens[0] == "CREATED") {
-    data.created = tokens[1];
-    for (size_t i = 2; i < tokens.size(); ++i) {
-      data.created += " " + tokens[i];
-    }
-  } else if (tokens[0] == "COLOR_REP") {
-    data.color_rep = tokens[1];
-  } else if (tokens[0] == "GAMUT_CENTER" || tokens[0] == "CSPACE_WHITE" ||
-             tokens[0] == "GAMUT_WHITE" || tokens[0] == "CSPACE_BLACK" ||
-             tokens[0] == "GAMUT_BLACK") {
-    data.gamut_center = parseVertex(
-        tokens); // Can be replaced with specific data parsing based on keyword
-  } else if (tokens[0].substr(0, 4) == "CUSP_") {
-    data.cusps.push_back(parseVertex(tokens));
-  } else {
-    // Handle unknown keywords or parsing errors
-    return false;
-  }
-  return true;
-}
 
-// Function to read the gamut data from a file
-std::shared_ptr<GamutData> readGamutData(const std::string &filepath) {
-  std::ifstream file(filepath);
-  if (!file.is_open()) {
-    return nullptr; // Error: could not open file
-  }
-
-  std::shared_ptr<GamutData> data =
-      std::make_shared<GamutData>(); // Create a shared pointer to store the
-                                     // gamut data
-
-  std::string line;
-  while (std::getline(file, line)) {
-    std::vector<std::string> tokens = parseLine(line);
-    if (!parseDataLine(tokens, *data)) {
-      // Handle parsing errors
-      return nullptr;
-    }
-  }
-
-  return data;
+    return data;
 }

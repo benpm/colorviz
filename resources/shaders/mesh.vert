@@ -12,16 +12,9 @@ out VertexData
 }
 v_out;
 
-layout (std140, binding = 0) uniform EngineState
-{
-    mat4 uTProj;
-    mat4 uTView;
-	uint uShowVertices;
-    uint uShowNormals;
-    uint uShowWireframe;
-    uint uIsMatcap;
-};
 uniform mat4 uTModel;
+uniform mat4 uTView;
+uniform mat4 uTProj;
 
 void main()
 {

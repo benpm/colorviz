@@ -1,22 +1,19 @@
 #include <util.hpp>
 #include <vecmath.hpp>
 
-// Struct to represent a gamut vertex
-struct GamutVertex {
-  double L, A, B;
+struct GamutData
+{
+    std::string descriptor;
+    std::string originator;
+    std::string created;
+    std::string color_rep;
+    Vector3f gamut_center;
+    Vector3f cspace_white;
+    Vector3f gamut_white;
+    Vector3f cspace_black;
+    Vector3f gamut_black;
+    std::vector<Vector3f> vertices;
+    std::vector<Vector3u> triangles;
 };
 
-// Struct to represent the entire gamut data
-struct GamutData {
-  std::string descriptor;
-  std::string originator;
-  std::string created;
-  std::string color_rep;
-  GamutVertex gamut_center;
-  GamutVertex cspace_white;
-  GamutVertex gamut_white;
-  GamutVertex cspace_black;
-  GamutVertex gamut_black;
-  std::vector<GamutVertex> cusps;
-  std::vector<std::vector<int>> triangles;
-};
+std::shared_ptr<GamutData> readGamutData(const std::string& filepath);

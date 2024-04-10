@@ -27,7 +27,7 @@ int main(int argc, char const* argv[])
     gleqInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "patchwork", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "colorviz", nullptr, nullptr);
     $assert(window, "Failed to create GLFW window");
 
     gleqTrackWindow(window);

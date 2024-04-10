@@ -13,8 +13,7 @@
 				"isDefault": true
 			},
 			"problemMatcher": [
-				"$msCompile",
-				"$gcc"
+				"$msCompile"
 			],
 			"presentation": {
 				"echo": true,
@@ -28,10 +27,7 @@
 				"light": "resources/light/build.svg",
 				"dark": "resources/dark/build.svg"
 			},
-			"detail": "CMake template build task",
-			"dependsOn": [
-				"Clear console"
-			]
+			"detail": "CMake template build task"
 		},
 		{
 			"type": "cmake",
@@ -71,26 +67,6 @@
 				"dark": "resources/dark/git.svg"
 			},
 			"detail": "Update submodules"
-		},
-		//Task that will clear console
-		{
-			"type": "shell",
-			"label": "Clear console",
-			"command": "clear",
-			"problemMatcher": [],
-			"presentation": {
-				"echo": true,
-				"reveal": "always",
-				"focus": false,
-				"panel": "shared",
-				"showReuseMessage": false,
-				"clear": true
-			},
-			"icon": {
-				"light": "resources/light/clear.svg",
-				"dark": "resources/dark/clear.svg"
-			},
-			"detail": "Clear console"
 		}
 	]
 }
