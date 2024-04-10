@@ -10,10 +10,8 @@
 
 struct Camera
 {
-   protected:
-    Vector2f viewSize = Vector2f::Zero();
-
    public:
+    Vector2f viewSize = Vector2f::Zero();
     Vector3f pos = Vector3f::Zero();
     Vector3f rot = Vector3f::Zero();
     Vector3f target = Vector3f::Zero();

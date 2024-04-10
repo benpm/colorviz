@@ -1,10 +1,12 @@
+#pragma once
+
 #include <shader_program.hpp>
-#include <camera.hpp>
-#include <gfx.hpp>
+#include <gleq.h>
 #include <GLFW/glfw3.h>
+
+#include <camera.hpp>
 #include <vecmath.hpp>
 #include <gamut.hpp>
-#include <gleq.h>
 
 class App
 {
@@ -15,7 +17,7 @@ class App
     Camera cam;
     std::shared_ptr<GamutData> data;
 
-    App(GLFWwindow* window);
+    App(Vector2f winSize);
     void prepare();
     void update(float time, float delta);
     void draw(float time, float delta);

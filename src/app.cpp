@@ -1,6 +1,6 @@
 #include <app.hpp>
 
-App::App(GLFWwindow* window)
+App::App(Vector2f winSize)
 {
     glEnable(GL_DEBUG_OUTPUT) $glChk;
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS) $glChk;
@@ -25,8 +25,11 @@ App::App(GLFWwindow* window)
     glGenVertexArrays(1, &vao) $glChk;
     glBindVertexArray(vao) $glChk;
     gfx::setbuf(GL_ARRAY_BUFFER, vbo, data->vertices);
-    gfx::setbuf(GL_ELEMENT_ARRAY_BUFFER, ebo, data->triangles);
     program.setVertexAttrib(vbo, "vPos", 3, GL_FLOAT, 0u, 0u);
+    gfx::setbuf(GL_ELEMENT_ARRAY_BUFFER, ebo, data->triangles);
+
+    cam.pos = { 0.0f, 0.0f, 2.0f };
+    cam.viewSize = winSize;
 }
 
 void App::prepare() {}
@@ -44,6 +47,7 @@ void App::draw(float time, float delta)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) $glChk;
     program.use();
     glBindVertexArray(vao) $glChk;
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo) $glChk;
     glDrawElements(GL_TRIANGLES, data->triangles.size(), GL_UNSIGNED_INT, nullptr) $glChk;
 }
 
@@ -54,6 +58,10 @@ void App::event(const GLEQevent& event)
             if (event.keyboard.key == GLFW_KEY_ESCAPE) {
                 doExit = true;
             }
+            break;
+        case GLEQ_WINDOW_RESIZED:
+            cam.viewSize.x() = event.size.width;
+            cam.viewSize.y() = event.size.height;
             break;
     }
 }

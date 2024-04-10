@@ -37,7 +37,7 @@ int main(int argc, char const* argv[])
     $assert(gladLoaded, "Failed to initialize GLAD");
 
     // Begin the application loop!
-    App app(window);
+    App app({ 1280.0f, 720.0f });
     float t = 0.0f;
     while (!glfwWindowShouldClose(window)) {
         app.prepare();

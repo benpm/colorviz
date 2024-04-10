@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <glad/gl.h>
+#include <GLFW/glfw3.h>
 #include <logging.hpp>
 #include <vecmath.hpp>
 #include <util.hpp>
