@@ -6,8 +6,6 @@ App::App(Vector2f winSize)
     glEnable(GL_DEBUG_OUTPUT) $glChk;
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS) $glChk;
     glEnable(GL_DEPTH_TEST) $glChk;
-    glEnable(GL_CULL_FACE) $glChk;
-    glCullFace(GL_BACK) $glChk;
     glFrontFace(GL_CCW) $glChk;
     glEnable(GL_BLEND) $glChk;
 
@@ -66,7 +64,7 @@ void App::draw(float time, float delta)
     program.use();
     glBindVertexArray(vao) $glChk;
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo) $glChk;
-    glDrawElements(GL_TRIANGLES, data->triangles.size(), GL_UNSIGNED_INT, nullptr) $glChk;
+    glDrawElements(GL_TRIANGLES, data->triangles.size() * 3, GL_UNSIGNED_INT, nullptr) $glChk;
 }
 
 void App::event(const GLEQevent& event)
