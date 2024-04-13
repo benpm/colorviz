@@ -1,4 +1,11 @@
 #include <mesh.hpp>
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
+Mesh::Mesh(const std::filesystem::path& filepath, ShaderProgram& _program) : program(_program)
+{
+    
+}
 
 void Mesh::generateBuffers()
 {

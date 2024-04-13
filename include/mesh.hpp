@@ -2,10 +2,11 @@
 #include <util.hpp>
 #include <vecmath.hpp>
 #include <shader_program.hpp>
+
+
 class Mesh
 {
-
-public:
+   public:
     ShaderProgram& program;
     Vector3f bbMin, bbMax;
     std::vector<Vector3f> vertices;
@@ -15,8 +16,9 @@ public:
    private:
     GLuint vao, vbo, ebo, vboColors;
 
-public:
-    Mesh(ShaderProgram& _program): program(_program) {}
+   public:
+    Mesh(ShaderProgram& _program) : program(_program) {}
+    Mesh(const std::filesystem::path& filepath, ShaderProgram& _program);
     void generateBuffers();
     void draw();
     ~Mesh();
