@@ -3,7 +3,8 @@
 #include <util.hpp>
 #include <vecmath.hpp>
 #include <unordered_map>
-#include <shader_program.hpp>
+#include <mesh.hpp>
+
 namespace Gamut
 {
     struct GamutData
@@ -65,22 +66,13 @@ namespace Gamut
     Vector3f LABtoRGB(const Vector3f& lab, Illuminant ill = Illuminant::D65);
     Vector3f XYZtoRGB(Vector3f& color);
 
-    class GamutMesh
+    class GamutMesh : public Mesh
     {
         public:
-            std::shared_ptr<GamutData> data;
-            Vector3f bbMin, bbMax;        
-            std::vector<Vector3f> vertices;
-            std::vector<Vector3f> colors;
-            std::vector<Vector3u> triangles;
-            ShaderProgram& program;
-
-        private:
-            GLuint vao, vbo, ebo, vboColors;
+            std::shared_ptr<GamutData> data; 
 
         public:
             GamutMesh(const std::string& filepath, ShaderProgram& program);
-            void generateBuffers();
-            void draw();            
+                        
     };
 };

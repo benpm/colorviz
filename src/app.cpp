@@ -17,6 +17,9 @@ App::App(Vector2f winSize)
     this->gamutMeshes.emplace_back(
         std::make_shared<Gamut::GamutMesh>("resources/profiles/CIERGB.gam", program)
     );
+    this->gamutMeshes.emplace_back(
+        std::make_shared<Gamut::GamutMesh>("resources/profiles/AdobeRGB1998.gam", program)
+    );
 
     camCtrl.mode = CameraControl::Mode::trackball;
     camCtrl.orbitDist(500.0f);
@@ -48,7 +51,6 @@ void App::update(float time, float delta)
     Vector3f centroid =
         gamutMeshes[0]->bbMin + (gamutMeshes[0]->bbMax - gamutMeshes[0]->bbMin) / 2.0f;
     model.translate(-centroid);
-    program.use();
     program.setUniform("uTModel", model.matrix());
     program.setUniform("uTView", cam.getView());
     program.setUniform("uTProj", cam.getProj());
@@ -58,7 +60,10 @@ void App::draw(float time, float delta)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) $glChk;
     program.use();
-    this->gamutMeshes[0]->draw();
+    for(auto& mesh : gamutMeshes) {
+        mesh->draw();
+    }
+    
 }
 
 void App::event(const GLEQevent& event)
