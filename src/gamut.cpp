@@ -47,6 +47,7 @@ std::shared_ptr<GamutData> readGamutData(const std::string& filepath)
                         std::stof(tokens[2]),
                         std::stof(tokens[3]),
                     });
+                    data->colors.push_back(LABtoRGB(data->vertices.back()));
                 } else if (tokens[0] == "END_DATA") {
                     section = GamutSection::triangle_header;
                 }
@@ -67,25 +68,9 @@ std::shared_ptr<GamutData> readGamutData(const std::string& filepath)
                 break;
         }
     }
-
-    setGamutColors(data);
-
     return data;
 }
 
-void setGamutColors(std::shared_ptr<GamutData>& data)
-{
-    data->colors.resize(data->vertices.size());
-    // auto colorIndexView = std::ranges::view::zip(data->colors,
-    // std::ranges::view::indices(data->colors)); std::for_each(std::execution::par,
-    // colorIndexView.begin(), colorIndexView.end(), [&](auto& colorIndex) {
-    //     colorIndex.first = LABtoRGB(data->vertices[colorIndex.second]);
-
-    // });
-    for (int i = 0; i < data->vertices.size(); i++) {
-        data->colors[i] = LABtoRGB(data->vertices[i]);
-    }
-}
 
 Vector3f LABtoRGB(const Vector3f& lab, Illuminant ill)
 {
@@ -103,7 +88,7 @@ Vector3f LABtoRGB(const Vector3f& lab, Illuminant ill)
     Vector3f XYZ = { xr, yr, zr };
     XYZ = XYZ.cwiseProduct(refWhites.at(ill));
 
-    // Convert to D50
+    // Convert to D65
     if (ill != Illuminant::D65) {
         Matrix3f scalingMatrix = Matrix3f::Identity();
         scalingMatrix.diagonal() = refWhites.at(Illuminant::D65).cwiseQuotient(refWhites.at(ill));

@@ -21,7 +21,6 @@ struct GamutData
 };
 
 std::shared_ptr<GamutData> readGamutData(const std::string& filepath);
-void setGamutColors(std::shared_ptr<GamutData>& data);
 
 enum class Illuminant
 {
