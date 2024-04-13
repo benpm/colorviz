@@ -1,82 +1,7 @@
 #include <gamut.hpp>
-#include <execution>
-#include <ranges>
+using namespace Gamut;
 
-std::vector<std::string> parseLine(const std::string& line)
-{
-    std::stringstream ss(line);
-    std::string token;
-    std::vector<std::string> tokens;
-    while (std::getline(ss, token, ' ')) {
-        tokens.push_back(token);
-    }
-    return tokens;
-}
-
-enum class GamutSection
-{
-    header,
-    vertices,
-    triangle_header,
-    triangles
-};
-
-std::shared_ptr<GamutData> readGamutData(const std::string& filepath)
-{
-    std::ifstream file(filepath);
-    assert(file.is_open());
-
-    std::shared_ptr<GamutData> data = std::make_shared<GamutData>();
-    std::string line;
-    GamutSection section = GamutSection::header;
-    data->bbMin = Vector3f::Constant(std::numeric_limits<float>::max());
-    data->bbMax = Vector3f::Constant(std::numeric_limits<float>::lowest());
-    while (std::getline(file, line)) {
-        std::vector<std::string> tokens = parseLine(line);
-        if (tokens.empty()) {
-            continue;
-        }
-        switch (section) {
-            case GamutSection::header:
-                if (tokens[0] == "BEGIN_DATA") {
-                    section = GamutSection::vertices;
-                }
-                break;
-            case GamutSection::vertices:
-                if (tokens.size() == 4) {
-                    data->vertices.push_back({
-                        std::stof(tokens[1]),
-                        std::stof(tokens[2]),
-                        std::stof(tokens[3]),
-                    });
-                    data->colors.push_back(LABtoRGB(data->vertices.back()));
-                    data->bbMin = data->bbMin.cwiseMin(data->vertices.back());
-                    data->bbMax = data->bbMax.cwiseMax(data->vertices.back());
-                } else if (tokens[0] == "END_DATA") {
-                    section = GamutSection::triangle_header;
-                }
-                break;
-            case GamutSection::triangle_header:
-                if (tokens[0] == "BEGIN_DATA") {
-                    section = GamutSection::triangles;
-                }
-                break;
-            case GamutSection::triangles:
-                if (tokens.size() == 3) {
-                    data->triangles.push_back({
-                        (uint32_t)std::stoul(tokens[0]),
-                        (uint32_t)std::stoul(tokens[1]),
-                        (uint32_t)std::stoul(tokens[2]),
-                    });
-                }
-                break;
-        }
-    }
-    return data;
-}
-
-
-Vector3f LABtoRGB(const Vector3f& lab, Illuminant ill)
+Vector3f Gamut::LABtoRGB(const Vector3f& lab, Illuminant ill)
 {
     // Convert CIE Lab to XYZ
     float fy = (lab.x() + 16.0f) / 116.0f;
@@ -101,7 +26,7 @@ Vector3f LABtoRGB(const Vector3f& lab, Illuminant ill)
     return XYZtoRGB(XYZ);
 }
 
-Vector3f XYZtoRGB(Vector3f& color)
+Vector3f Gamut::XYZtoRGB(Vector3f& color)
 {
     color = XYZtoSRGBmatrix.transpose() * color;
     // Correct for gamma
@@ -114,4 +39,106 @@ Vector3f XYZtoRGB(Vector3f& color)
     color = color.cwiseMax(0.0f).cwiseMin(1.0f);
     // clamp to [0, 1]
     return color;
+}
+
+enum class GamutSection
+{
+    header,
+    vertices,
+    triangle_header,
+    triangles
+};
+
+std::vector<std::string> parseLine(const std::string& line)
+{
+    std::stringstream ss(line);
+    std::string token;
+    std::vector<std::string> tokens;
+    while (std::getline(ss, token, ' ')) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+Gamut::GamutMesh::GamutMesh(const std::string& filepath, ShaderProgram& _program)
+    : program(_program)
+{
+    std::ifstream file(filepath);
+    assert(file.is_open());
+
+    this->data = std::make_shared<GamutData>();
+    std::string line;
+    GamutSection section = GamutSection::header;
+    this->bbMin = Vector3f::Constant(std::numeric_limits<float>::max());
+    this->bbMax = Vector3f::Constant(std::numeric_limits<float>::lowest());
+    while (std::getline(file, line)) {
+        std::vector<std::string> tokens = parseLine(line);
+        if (tokens.empty()) {
+            continue;
+        }
+        switch (section) {
+            case GamutSection::header:
+                if (tokens[0] == "BEGIN_DATA") {
+                    section = GamutSection::vertices;
+                }
+                break;
+            case GamutSection::vertices:
+                if (tokens.size() == 4) {
+                    this->vertices.push_back({
+                        std::stof(tokens[1]),
+                        std::stof(tokens[2]),
+                        std::stof(tokens[3]),
+                    });
+                    this->colors.push_back(Gamut::LABtoRGB(this->vertices.back()));
+                    this->bbMin = this->bbMin.cwiseMin(this->vertices.back());
+                    this->bbMax = this->bbMax.cwiseMax(this->vertices.back());
+                } else if (tokens[0] == "END_DATA") {
+                    section = GamutSection::triangle_header;
+                }
+                break;
+            case GamutSection::triangle_header:
+                if (tokens[0] == "BEGIN_DATA") {
+                    section = GamutSection::triangles;
+                }
+                break;
+            case GamutSection::triangles:
+                if (tokens.size() == 3) {
+                    this->triangles.push_back({
+                        (uint32_t)std::stoul(tokens[0]),
+                        (uint32_t)std::stoul(tokens[1]),
+                        (uint32_t)std::stoul(tokens[2]),
+                    });
+                }
+                break;
+        }
+    }
+
+    $debug(
+        "loaded gamut with {} vertices and {} faces", this->vertices.size(), this->triangles.size()
+    );
+
+    this->generateBuffers();
+}
+
+void Gamut::GamutMesh::generateBuffers()
+{
+    glGenVertexArrays(1, &this->vao) $glChk;
+    glBindVertexArray(this->vao) $glChk;
+    glGenBuffers(1, &this->vbo) $glChk;
+    gfx::setbuf(GL_ARRAY_BUFFER, this->vbo, this->vertices);
+    this->program.setVertexAttrib(this->vbo, "vPos", 3, GL_FLOAT, 0u, 0u);
+
+    glGenBuffers(1, &this->vboColors) $glChk;
+    gfx::setbuf(GL_ARRAY_BUFFER, this->vboColors, this->colors);
+    this->program.setVertexAttrib(this->vboColors, "vColor", 3, GL_FLOAT, 0u, 0u);
+
+    glGenBuffers(1, &this->ebo) $glChk;
+    gfx::setbuf(GL_ELEMENT_ARRAY_BUFFER, this->ebo, this->triangles);
+}
+
+void Gamut::GamutMesh::draw()
+{
+    glBindVertexArray(vao) $glChk;
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo) $glChk;
+    glDrawElements(GL_TRIANGLES, this->triangles.size() * 3, GL_UNSIGNED_INT, nullptr) $glChk;
 }

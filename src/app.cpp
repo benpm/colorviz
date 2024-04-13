@@ -14,23 +14,9 @@ App::App(Vector2f winSize)
         Shader(GL_FRAGMENT_SHADER, fs::path("resources/shaders/mesh.frag")),
     });
 
-    data = readGamutData("resources/profiles/CIERGB.gam");
-    $debug(
-        "loaded gamut with {} vertices and {} faces", data->vertices.size(), data->triangles.size()
+    this->gamutMeshes.emplace_back(
+        std::make_shared<Gamut::GamutMesh>("resources/profiles/CIERGB.gam", program)
     );
-
-    glGenVertexArrays(1, &vao) $glChk;
-    glBindVertexArray(vao) $glChk;
-    glGenBuffers(1, &vbo) $glChk;
-    gfx::setbuf(GL_ARRAY_BUFFER, vbo, data->vertices);
-    program.setVertexAttrib(vbo, "vPos", 3, GL_FLOAT, 0u, 0u);
-
-    glGenBuffers(1, &vboColors) $glChk;
-    gfx::setbuf(GL_ARRAY_BUFFER, vboColors, data->colors);
-    program.setVertexAttrib(vboColors, "vColor", 3, GL_FLOAT, 0u, 0u);
-
-    glGenBuffers(1, &ebo) $glChk;
-    gfx::setbuf(GL_ELEMENT_ARRAY_BUFFER, ebo, data->triangles);
 
     camCtrl.mode = CameraControl::Mode::trackball;
     camCtrl.orbitDist(500.0f);
@@ -59,8 +45,10 @@ void App::update(float time, float delta)
     camCtrl.update(cam, cam.viewSize);
     Transform3f model = Transform3f::Identity();
     model.rotate(AngleAxisf(45, Vector3f::UnitZ()));
-    Vector3f centroid = data->bbMin + (data->bbMax - data->bbMin) / 2.0f;
+    Vector3f centroid =
+        gamutMeshes[0]->bbMin + (gamutMeshes[0]->bbMax - gamutMeshes[0]->bbMin) / 2.0f;
     model.translate(-centroid);
+    program.use();
     program.setUniform("uTModel", model.matrix());
     program.setUniform("uTView", cam.getView());
     program.setUniform("uTProj", cam.getProj());
@@ -70,9 +58,7 @@ void App::draw(float time, float delta)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) $glChk;
     program.use();
-    glBindVertexArray(vao) $glChk;
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo) $glChk;
-    glDrawElements(GL_TRIANGLES, data->triangles.size() * 3, GL_UNSIGNED_INT, nullptr) $glChk;
+    this->gamutMeshes[0]->draw();
 }
 
 void App::event(const GLEQevent& event)

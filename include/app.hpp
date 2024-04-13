@@ -16,7 +16,7 @@ class App
     ShaderProgram program;
     Camera cam;
     CameraControl camCtrl;
-    std::shared_ptr<GamutData> data;
+    std::vector<std::shared_ptr<Gamut::GamutMesh>> gamutMeshes;
     struct Mouse
     {
         Vector2f pos = Vector2f::Zero();
