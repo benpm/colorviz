@@ -15,6 +15,7 @@ struct GamutData
     Vector3f gamut_white;
     Vector3f cspace_black;
     Vector3f gamut_black;
+    Vector3f bbMin, bbMax;
     std::vector<Vector3f> vertices;
     std::vector<Vector3f> colors;
     std::vector<Vector3u> triangles;

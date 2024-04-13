@@ -29,6 +29,8 @@ std::shared_ptr<GamutData> readGamutData(const std::string& filepath)
     std::shared_ptr<GamutData> data = std::make_shared<GamutData>();
     std::string line;
     GamutSection section = GamutSection::header;
+    data->bbMin = Vector3f::Constant(std::numeric_limits<float>::max());
+    data->bbMax = Vector3f::Constant(std::numeric_limits<float>::lowest());
     while (std::getline(file, line)) {
         std::vector<std::string> tokens = parseLine(line);
         if (tokens.empty()) {
@@ -48,6 +50,8 @@ std::shared_ptr<GamutData> readGamutData(const std::string& filepath)
                         std::stof(tokens[3]),
                     });
                     data->colors.push_back(LABtoRGB(data->vertices.back()));
+                    data->bbMin = data->bbMin.cwiseMin(data->vertices.back());
+                    data->bbMax = data->bbMax.cwiseMax(data->vertices.back());
                 } else if (tokens[0] == "END_DATA") {
                     section = GamutSection::triangle_header;
                 }
