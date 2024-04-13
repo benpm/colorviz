@@ -12,7 +12,7 @@ class App
 {
    public:
     bool doExit = false;
-    GLuint vao, vbo, ebo;
+    GLuint vao, vbo, ebo, vboColors;
     ShaderProgram program;
     Camera cam;
     CameraControl camCtrl;
