@@ -16,7 +16,7 @@ struct Camera
     Vector3f rot = Vector3f::Zero();
     Vector3f target = Vector3f::Zero();
     float near = 0.01f;
-    float far = 1000.0f;
+    float far = 100000.0f;
     float fov = 1.1f;
     float zoom = 1.0f;
     enum class Projection

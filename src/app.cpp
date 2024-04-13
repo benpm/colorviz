@@ -1,5 +1,5 @@
 #include <app.hpp>
-
+#include <filesystem>
 App::App(Vector2f winSize)
 {
     glfwSwapInterval(1);
@@ -14,12 +14,23 @@ App::App(Vector2f winSize)
         Shader(GL_FRAGMENT_SHADER, fs::path("resources/shaders/mesh.frag")),
     });
 
-    this->gamutMeshes.emplace_back(
-        std::make_shared<Gamut::GamutMesh>("resources/profiles/CIERGB.gam", program)
-    );
-    this->gamutMeshes.emplace_back(
-        std::make_shared<Gamut::GamutMesh>("resources/profiles/AdobeRGB1998.gam", program)
-    );
+    this->loadGamutMesh("resources/profiles/CIERGB.gam");
+    this->loadGamutMesh("resources/profiles/AdobeRGB1998.gam");
+
+    yAxisArrow =
+        std::make_shared<Mesh>(std::filesystem::path("resources/models/arrow.obj"), program);
+    yAxisArrow->setVertexColor({ 0.0f, 1.0f, 0.0f });
+    yAxisArrow->transform.scale(25.f);
+
+    xAxisArrow = std::make_shared<Mesh>(*yAxisArrow);
+    xAxisArrow->setVertexColor({ 1.0f, 0.0f, 0.0f });
+    xAxisArrow->transform.rotate(AngleAxisf(90.0f, Vector3f::UnitZ()));
+    xAxisArrow->transform.scale(25.f);
+
+    zAxisArrow = std::make_shared<Mesh>(*xAxisArrow);
+    zAxisArrow->setVertexColor({ 0.0f, 0.0f, 1.0f });
+    zAxisArrow->transform.rotate(AngleAxisf(90.0f, Vector3f::UnitX()));
+    zAxisArrow->transform.scale(25.f);
 
     camCtrl.mode = CameraControl::Mode::trackball;
     camCtrl.orbitDist(500.0f);
@@ -46,12 +57,7 @@ void App::update(float time, float delta)
     );
     camCtrl.universalZoom(mouse.scroll);
     camCtrl.update(cam, cam.viewSize);
-    Transform3f model = Transform3f::Identity();
-    model.rotate(AngleAxisf(45, Vector3f::UnitZ()));
-    Vector3f centroid =
-        gamutMeshes[0]->bbMin + (gamutMeshes[0]->bbMax - gamutMeshes[0]->bbMin) / 2.0f;
-    model.translate(-centroid);
-    program.setUniform("uTModel", model.matrix());
+
     program.setUniform("uTView", cam.getView());
     program.setUniform("uTProj", cam.getProj());
 }
@@ -60,10 +66,12 @@ void App::draw(float time, float delta)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) $glChk;
     program.use();
-    for(auto& mesh : gamutMeshes) {
+    for (auto& mesh : gamutMeshes) {
         mesh->draw();
     }
-    
+    xAxisArrow->draw();
+    yAxisArrow->draw();
+    zAxisArrow->draw();
 }
 
 void App::event(const GLEQevent& event)
@@ -106,4 +114,13 @@ void App::onMouseButton(int button, bool pressed)
     } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
         mouse.right = pressed;
     }
+}
+
+void App::loadGamutMesh(const std::string& filepath)
+{
+    gamutMeshes.emplace_back(std::make_shared<Gamut::GamutMesh>(filepath, program));
+    gamutMeshes.back()->transform.rotate(AngleAxisf(45, Vector3f::UnitZ()));
+    Vector3f centroid =
+        gamutMeshes[0]->bbMin + (gamutMeshes[0]->bbMax - gamutMeshes[0]->bbMin) / 2.0f;
+    gamutMeshes.back()->transform.translate(-centroid);
 }
