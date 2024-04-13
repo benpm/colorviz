@@ -19,12 +19,17 @@ App::App(Vector2f winSize)
         "loaded gamut with {} vertices and {} faces", data->vertices.size(), data->triangles.size()
     );
 
-    glGenBuffers(1, &vbo) $glChk;
-    glGenBuffers(1, &ebo) $glChk;
     glGenVertexArrays(1, &vao) $glChk;
     glBindVertexArray(vao) $glChk;
+    glGenBuffers(1, &vbo) $glChk;
     gfx::setbuf(GL_ARRAY_BUFFER, vbo, data->vertices);
     program.setVertexAttrib(vbo, "vPos", 3, GL_FLOAT, 0u, 0u);
+
+    glGenBuffers(1, &vboColors) $glChk;
+    gfx::setbuf(GL_ARRAY_BUFFER, vboColors, data->colors);
+    program.setVertexAttrib(vboColors, "vColor", 3, GL_FLOAT, 0u, 0u);
+
+    glGenBuffers(1, &ebo) $glChk;
     gfx::setbuf(GL_ELEMENT_ARRAY_BUFFER, ebo, data->triangles);
 
     camCtrl.mode = CameraControl::Mode::orbit;
