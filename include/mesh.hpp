@@ -29,6 +29,6 @@ class Mesh
     Mesh(Mesh& other);
     void setVertexColor(const Vector3f& color);
     void generateBuffers();
-    void draw();
+    void draw(bool isWireframe = false);
     ~Mesh();
 };

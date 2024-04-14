@@ -10,7 +10,9 @@ v_in;
 
 out vec4 fColor;
 
+uniform float uOpacity;
+
 void main()
 {
-    fColor = vec4(v_in.color,1.0);
+    fColor = vec4(v_in.color,uOpacity);
 }

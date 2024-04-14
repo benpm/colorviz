@@ -99,6 +99,7 @@
         "xtree": "cpp",
         "xutility": "cpp",
         "shared_mutex": "cpp",
-        "execution": "cpp"
+        "execution": "cpp",
+        "*.tcc": "cpp"
     }
 }

@@ -14,6 +14,9 @@ App::App(Vector2f winSize)
         Shader(GL_FRAGMENT_SHADER, fs::path("resources/shaders/mesh.frag")),
     });
 
+    this->transparentGamut = 0;
+    this->gamutOpacity = 0.5f;
+
     yAxisArrow =
         std::make_shared<Mesh>(std::filesystem::path("resources/models/arrow.obj"), program);
     yAxisArrow->setVertexColor({ 0.0f, 1.0f, 0.0f });
@@ -89,23 +92,64 @@ void App::update(float time, float delta)
         camCtrl.update(cam, cam.viewSize);
     }
 
+    // Smoothly switch between color spaces
+    if(this->isAnimateSpace)
+    {
+        this->startTime = time;
+        this->isAnimateSpace = false;
+    }
+    const float animationDuration = 1.0f;
+    if(this->startTime >= 0.0f)
+    {
+        float t = time - this->startTime;
+        float interpValue =  t / animationDuration;
+        if(interpValue > 1.0f)
+        {
+            this->startTime = -1.0f;
+            this->spaceInerpolant = this->targetSpaceInterpolant;
+        }
+        else
+            this->spaceInerpolant = lerp(1.0f-this->targetSpaceInterpolant, this->targetSpaceInterpolant, interpValue);
+    }
+
     program.setUniform("uTView", cam.getView());
     program.setUniform("uTProj", cam.getProj());
+    program.setUniform("uOpacity", 1.0f);
 }
 
 void App::draw(float time, float delta)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) $glChk;
     program.use();
-    for (auto& mesh : gamutMeshes) {
-        mesh->draw();
-    }
+    program.setUniform("spaceInterp", 0.0f);
     xAxisArrow->draw();
     yAxisArrow->draw();
     zAxisArrow->draw();
     textL->draw();
     textA->draw();
     textB->draw();
+
+    if (gamutMeshes.empty()) {
+        return;
+    }
+
+    float extent = (this->gamutMeshes[0]->bbMax - this->gamutMeshes[0]->bbMin).minCoeff();
+    program.setUniform("uExtent", extent);
+    program.setUniform("spaceInterp", this->spaceInerpolant);
+    for (int i = 0; i < gamutMeshes.size(); i++) {
+        if (i == transparentGamut) {
+            continue;
+        }
+        gamutMeshes[i]->draw(gamutMeshes[i]->isWireframe);
+    }
+
+    if (transparentGamut != -1) {
+        glEnable(GL_BLEND) $glChk;
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) $glChk;
+        program.setUniform("uOpacity", gamutOpacity);
+        gamutMeshes[transparentGamut]->draw(gamutMeshes[transparentGamut]->isWireframe);
+        glDisable(GL_BLEND) $glChk;
+    }
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -148,6 +192,9 @@ void App::event(const GLEQevent& event)
             if (event.keyboard.key == GLFW_KEY_ESCAPE) {
                 doExit = true;
             }
+            if (event.keyboard.key == GLFW_KEY_SPACE) {
+                switchSpace();
+            }
             break;
         case GLEQ_WINDOW_RESIZED:
             cam.viewSize.x() = event.size.width;
@@ -187,4 +234,10 @@ void App::loadGamutMesh(const std::string& filepath)
 {
     gamutMeshes.emplace_back(std::make_shared<Gamut::GamutMesh>(filepath, program));
     gamutMeshes.back()->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitZ()));
+}
+
+void App::switchSpace()
+{
+    this->targetSpaceInterpolant = 1.0f - this->spaceInerpolant;
+    this->isAnimateSpace = true;
 }

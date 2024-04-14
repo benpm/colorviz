@@ -68,11 +68,11 @@ namespace Gamut
 
     class GamutMesh : public Mesh
     {
-        public:
-            std::shared_ptr<GamutData> data; 
+       public:
+        std::shared_ptr<GamutData> data;
+        bool isWireframe = false;
 
-        public:
-            GamutMesh(const std::string& filepath, ShaderProgram& program);
-                        
+       public:
+        GamutMesh(const std::string& filepath, ShaderProgram& program);
     };
 };

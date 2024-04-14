@@ -84,12 +84,12 @@ void Mesh::generateBuffers()
     gfx::setbuf(GL_ELEMENT_ARRAY_BUFFER, this->ebo, this->triangles);
 }
 
-void Mesh::draw()
+void Mesh::draw(bool isWireframe)
 {
     program.setUniform("uTModel", this->transform.matrix());
     glBindVertexArray(vao) $glChk;
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo) $glChk;
-    glDrawElements(GL_TRIANGLES, this->triangles.size() * 3, GL_UNSIGNED_INT, nullptr) $glChk;
+    glDrawElements(isWireframe ? GL_LINES : GL_TRIANGLES, this->triangles.size() * 3, GL_UNSIGNED_INT, nullptr) $glChk;
 }
 
 Mesh::~Mesh()
