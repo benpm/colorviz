@@ -93,23 +93,22 @@ void App::update(float time, float delta)
     }
 
     // Smoothly switch between color spaces
-    if(this->isAnimateSpace)
-    {
+    if (this->isAnimateSpace) {
         this->startTime = time;
         this->isAnimateSpace = false;
     }
     const float animationDuration = 1.0f;
-    if(this->startTime >= 0.0f)
-    {
+    if (this->startTime >= 0.0f) {
         float t = time - this->startTime;
-        float interpValue =  t / animationDuration;
-        if(interpValue > 1.0f)
-        {
+        float interpValue = t / animationDuration;
+        if (interpValue > 1.0f) {
             this->startTime = -1.0f;
             this->spaceInerpolant = this->targetSpaceInterpolant;
+        } else {
+            this->spaceInerpolant = lerp(
+                1.0f - this->targetSpaceInterpolant, this->targetSpaceInterpolant, interpValue
+            );
         }
-        else
-            this->spaceInerpolant = lerp(1.0f-this->targetSpaceInterpolant, this->targetSpaceInterpolant, interpValue);
     }
 
     program.setUniform("uTView", cam.getView());
@@ -129,26 +128,24 @@ void App::draw(float time, float delta)
     textA->draw();
     textB->draw();
 
-    if (gamutMeshes.empty()) {
-        return;
-    }
-
-    float extent = (this->gamutMeshes[0]->bbMax - this->gamutMeshes[0]->bbMin).minCoeff();
-    program.setUniform("uExtent", extent);
-    program.setUniform("spaceInterp", this->spaceInerpolant);
-    for (int i = 0; i < gamutMeshes.size(); i++) {
-        if (i == transparentGamut) {
-            continue;
+    if (!gamutMeshes.empty()) {
+        float extent = (this->gamutMeshes[0]->bbMax - this->gamutMeshes[0]->bbMin).minCoeff();
+        program.setUniform("uExtent", extent);
+        program.setUniform("spaceInterp", this->spaceInerpolant);
+        for (int i = 0; i < gamutMeshes.size(); i++) {
+            if (i == transparentGamut) {
+                continue;
+            }
+            gamutMeshes[i]->draw(gamutMeshes[i]->isWireframe);
         }
-        gamutMeshes[i]->draw(gamutMeshes[i]->isWireframe);
-    }
 
-    if (transparentGamut != -1) {
-        glEnable(GL_BLEND) $glChk;
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) $glChk;
-        program.setUniform("uOpacity", gamutOpacity);
-        gamutMeshes[transparentGamut]->draw(gamutMeshes[transparentGamut]->isWireframe);
-        glDisable(GL_BLEND) $glChk;
+        if (transparentGamut != -1) {
+            glEnable(GL_BLEND) $glChk;
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) $glChk;
+            program.setUniform("uOpacity", gamutOpacity);
+            gamutMeshes[transparentGamut]->draw(gamutMeshes[transparentGamut]->isWireframe);
+            glDisable(GL_BLEND) $glChk;
+        }
     }
 
     ImGui::Render();
