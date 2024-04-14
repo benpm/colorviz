@@ -14,9 +14,6 @@ App::App(Vector2f winSize)
         Shader(GL_FRAGMENT_SHADER, fs::path("resources/shaders/mesh.frag")),
     });
 
-    this->loadGamutMesh("resources/profiles/CIERGB.gam");
-    this->loadGamutMesh("resources/profiles/AdobeRGB1998.gam");
-
     yAxisArrow =
         std::make_shared<Mesh>(std::filesystem::path("resources/models/arrow.obj"), program);
     yAxisArrow->setVertexColor({ 0.0f, 1.0f, 0.0f });
@@ -51,27 +48,46 @@ App::App(Vector2f winSize)
     camCtrl.orbitDist(500.0f);
     cam.pos = { 0.0f, 0.0f, 2.0f };
     cam.viewSize = winSize;
+
+    // Find gamut files in resources/profiles
+    for (const auto& entry : fs::directory_iterator("resources/profiles")) {
+        if (entry.path().extension() == ".gam") {
+            gamutFiles.push_back(entry.path().filename().string());
+        }
+    }
+
+    // Initialize ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForOpenGL(glfwGetCurrentContext(), true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+    ImGui::StyleColorsDark();
 }
 
 void App::prepare()
 {
     mouse.scroll = 0.0f;
+    mouse.disabled = false;
 }
 
 void App::update(float time, float delta)
 {
+    updateGUI();
+
     mouse.delta = mouse.pos - mouse.lastPos;
     mouse.dragDelta = Vector2f(mouse.dragStart - mouse.pos) * (float)mouse.left * 2.0f;
     mouse.dragDelta.y() *= -1.0f;
     mouse.lastPos = mouse.pos;
 
-    Vector2f screenDragDelta = mouse.delta * (float)mouse.left;
-    camCtrl.control(
-        screenDragDelta.cwiseQuotient(cam.viewSize), mouse.dragDelta.cwiseQuotient(cam.viewSize),
-        { 0.0f, 0.0f }
-    );
-    camCtrl.universalZoom(mouse.scroll);
-    camCtrl.update(cam, cam.viewSize);
+    if (!mouse.disabled) {
+        Vector2f screenDragDelta = mouse.delta * (float)mouse.left;
+        camCtrl.control(
+            screenDragDelta.cwiseQuotient(cam.viewSize),
+            mouse.dragDelta.cwiseQuotient(cam.viewSize), { 0.0f, 0.0f }
+        );
+        camCtrl.universalZoom(mouse.scroll);
+        camCtrl.update(cam, cam.viewSize);
+    }
 
     program.setUniform("uTView", cam.getView());
     program.setUniform("uTProj", cam.getProj());
@@ -90,6 +106,39 @@ void App::draw(float time, float delta)
     textL->draw();
     textA->draw();
     textB->draw();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void App::updateGUI()
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    {
+        ImGui::Begin(
+            "Controls", nullptr,
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
+        );
+        mouse.disabled |= ImGui::IsWindowHovered();
+        ImGui::SetWindowPos({ 4.0f, 4.0f }, ImGuiCond_FirstUseEver);
+        static std::unordered_set<size_t> selectedGamuts;
+        if (ImGui::BeginCombo("Gamuts", "(select gamuts)")) {
+            for (size_t i = 0; i < gamutFiles.size(); ++i) {
+                if (ImGui::Selectable(gamutFiles[i].c_str(), selectedGamuts.contains(i))) {
+                    if (selectedGamuts.contains(i)) {
+                        $warn("not implemented yet!");
+                    } else {
+                        loadGamutMesh("resources/profiles/" + gamutFiles[i]);
+                        selectedGamuts.insert(i);
+                    }
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::End();
+    }
 }
 
 void App::event(const GLEQevent& event)
