@@ -75,16 +75,36 @@ void App::update(float time, float delta)
     camCtrl.universalZoom(mouse.scroll);
     camCtrl.update(cam, cam.viewSize);
 
+    // Smoothly switch between color spaces
+    if(this->isAnimateSpace)
+    {
+        this->startTime = time;
+        this->isAnimateSpace = false;
+    }
+    const float animationDuration = 1.0f;
+    if(this->startTime >= 0.0f)
+    {
+        float t = time - this->startTime;
+        float interpValue =  t / animationDuration;
+        if(interpValue > 1.0f)
+        {
+            this->startTime = -1.0f;
+            this->spaceInerpolant = this->targetSpaceInterpolant;
+        }
+        else
+            this->spaceInerpolant = lerp(1.0f-this->targetSpaceInterpolant, this->targetSpaceInterpolant, interpValue);
+    }
+
     program.setUniform("uTView", cam.getView());
     program.setUniform("uTProj", cam.getProj());
-    program.setUniform("uOpacity", 1.0f);    
+    program.setUniform("uOpacity", 1.0f);
 }
 
 void App::draw(float time, float delta)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) $glChk;
     program.use();
-    program.setUniform("uIsLAB", GL_TRUE);
+    program.setUniform("spaceInterp", 0.0f);
     xAxisArrow->draw();
     yAxisArrow->draw();
     zAxisArrow->draw();
@@ -92,9 +112,13 @@ void App::draw(float time, float delta)
     textA->draw();
     textB->draw();
 
+    if (gamutMeshes.empty()) {
+        return;
+    }
+
     float extent = (this->gamutMeshes[0]->bbMax - this->gamutMeshes[0]->bbMin).minCoeff();
     program.setUniform("uExtent", extent);
-    program.setUniform("uIsLAB", this->isLAB);
+    program.setUniform("spaceInterp", this->spaceInerpolant);
     for (int i = 0; i < gamutMeshes.size(); i++) {
         if (i == transparentGamut) {
             continue;
@@ -117,6 +141,9 @@ void App::event(const GLEQevent& event)
         case GLEQ_KEY_PRESSED:
             if (event.keyboard.key == GLFW_KEY_ESCAPE) {
                 doExit = true;
+            }
+            if (event.keyboard.key == GLFW_KEY_SPACE) {
+                switchSpace();
             }
             break;
         case GLEQ_WINDOW_RESIZED:
@@ -157,4 +184,10 @@ void App::loadGamutMesh(const std::string& filepath)
 {
     gamutMeshes.emplace_back(std::make_shared<Gamut::GamutMesh>(filepath, program));
     gamutMeshes.back()->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitZ()));
+}
+
+void App::switchSpace()
+{
+    this->targetSpaceInterpolant = 1.0f - this->spaceInerpolant;
+    this->isAnimateSpace = true;
 }

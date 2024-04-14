@@ -18,7 +18,11 @@ class App
     std::vector<std::shared_ptr<Gamut::GamutMesh>> gamutMeshes;
     uint32_t transparentGamut = -1;
     float gamutOpacity = 1.0f;
-    bool isLAB = false;
+
+    float spaceInerpolant = 0.0f,targetSpaceInterpolant = 1.0;
+    float startTime=-1.0f;
+    bool isAnimateSpace = false;
+
     std::shared_ptr<Mesh> xAxisArrow, yAxisArrow, zAxisArrow, textL, textA, textB;
     struct Mouse
     {
@@ -40,4 +44,5 @@ class App
     void event(const GLEQevent& event);
     void onMouseButton(int button, bool pressed);
     void loadGamutMesh(const std::string& filepath);
+    void switchSpace();
 };
