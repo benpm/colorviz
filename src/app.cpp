@@ -16,6 +16,7 @@ App::App(Vector2f winSize)
 
     this->loadGamutMesh("resources/profiles/CIERGB.gam");
     this->loadGamutMesh("resources/profiles/AdobeRGB1998.gam");
+    this->gamutMeshes[0]->isWireframe = true;
 
     yAxisArrow =
         std::make_shared<Mesh>(std::filesystem::path("resources/models/arrow.obj"), program);
@@ -82,7 +83,7 @@ void App::draw(float time, float delta)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) $glChk;
     program.use();
     for (auto& mesh : gamutMeshes) {
-        mesh->draw();
+        mesh->draw(mesh->isWireframe);
     }
     xAxisArrow->draw();
     yAxisArrow->draw();
