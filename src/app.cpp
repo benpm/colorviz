@@ -16,7 +16,8 @@ App::App(Vector2f winSize)
 
     this->loadGamutMesh("resources/profiles/CIERGB.gam");
     this->loadGamutMesh("resources/profiles/AdobeRGB1998.gam");
-    this->gamutMeshes[0]->isWireframe = true;
+    this->transparentGamut = 0;
+    this->gamutOpacity = 0.5f;
 
     yAxisArrow =
         std::make_shared<Mesh>(std::filesystem::path("resources/models/arrow.obj"), program);
@@ -76,21 +77,38 @@ void App::update(float time, float delta)
 
     program.setUniform("uTView", cam.getView());
     program.setUniform("uTProj", cam.getProj());
+    program.setUniform("uOpacity", 1.0f);    
 }
 
 void App::draw(float time, float delta)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) $glChk;
     program.use();
-    for (auto& mesh : gamutMeshes) {
-        mesh->draw(mesh->isWireframe);
-    }
+    program.setUniform("uIsLAB", GL_TRUE);
     xAxisArrow->draw();
     yAxisArrow->draw();
     zAxisArrow->draw();
     textL->draw();
     textA->draw();
     textB->draw();
+
+    float extent = (this->gamutMeshes[0]->bbMax - this->gamutMeshes[0]->bbMin).minCoeff();
+    program.setUniform("uExtent", extent);
+    program.setUniform("uIsLAB", this->isLAB);
+    for (int i = 0; i < gamutMeshes.size(); i++) {
+        if (i == transparentGamut) {
+            continue;
+        }
+        gamutMeshes[i]->draw(gamutMeshes[i]->isWireframe);
+    }
+
+    if (transparentGamut != -1) {
+        glEnable(GL_BLEND) $glChk;
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) $glChk;
+        program.setUniform("uOpacity", gamutOpacity);
+        gamutMeshes[transparentGamut]->draw(gamutMeshes[transparentGamut]->isWireframe);
+        glDisable(GL_BLEND) $glChk;
+    }
 }
 
 void App::event(const GLEQevent& event)

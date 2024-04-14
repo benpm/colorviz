@@ -15,11 +15,16 @@ v_out;
 uniform mat4 uTModel;
 uniform mat4 uTView;
 uniform mat4 uTProj;
+uniform bool uIsLAB;
+uniform float uExtent;
 
 void main()
 {
     v_out.position = vPos;
     v_out.normal = normalize(vNormal);
     v_out.color = vColor;
-    gl_Position = uTProj * uTView * uTModel * vec4(vPos, 1.0);
+    if(uIsLAB)
+        gl_Position = uTProj * uTView * uTModel * vec4(vPos, 1.0);
+    else
+        gl_Position = uTProj * uTView * uTModel * vec4(uExtent*vColor, 1.0);
 }

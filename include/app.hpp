@@ -16,6 +16,9 @@ class App
     Camera cam;
     CameraControl camCtrl;
     std::vector<std::shared_ptr<Gamut::GamutMesh>> gamutMeshes;
+    uint32_t transparentGamut = -1;
+    float gamutOpacity = 1.0f;
+    bool isLAB = false;
     std::shared_ptr<Mesh> xAxisArrow, yAxisArrow, zAxisArrow, textL, textA, textB;
     struct Mouse
     {
