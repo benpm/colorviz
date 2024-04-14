@@ -24,13 +24,28 @@ App::App(Vector2f winSize)
 
     xAxisArrow = std::make_shared<Mesh>(*yAxisArrow);
     xAxisArrow->setVertexColor({ 1.0f, 0.0f, 0.0f });
-    xAxisArrow->transform.rotate(AngleAxisf(90.0f, Vector3f::UnitZ()));
+    xAxisArrow->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitZ()));
     xAxisArrow->transform.scale(25.f);
 
     zAxisArrow = std::make_shared<Mesh>(*xAxisArrow);
     zAxisArrow->setVertexColor({ 0.0f, 0.0f, 1.0f });
-    zAxisArrow->transform.rotate(AngleAxisf(90.0f, Vector3f::UnitX()));
+    zAxisArrow->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitX()));
     zAxisArrow->transform.scale(25.f);
+
+    textL = std::make_shared<Mesh>(std::filesystem::path("resources/models/L.obj"), program);
+    textA = std::make_shared<Mesh>(std::filesystem::path("resources/models/A.obj"), program);
+    textB = std::make_shared<Mesh>(std::filesystem::path("resources/models/B.obj"), program);
+
+    textL->transform.translate(Vector3f{ 0.0f, 200.0f, 0.0f });
+    textL->transform.scale(50.0f);
+    textL->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitX()));
+    textL->setVertexColor({ 1.0f, 1.0f, 1.0f });
+    textA->transform.translate(Vector3f{ -200.0f, 0.0f, 0.0f });
+    textA->transform.scale(50.0f);
+    textA->setVertexColor({ 1.0f, 1.0f, 1.0f });
+    textB->transform.translate(Vector3f{ 0.0f, 0.0f, 200.0f });
+    textB->transform.scale(50.0f);
+    textB->setVertexColor({ 1.0f, 1.0f, 1.0f });
 
     camCtrl.mode = CameraControl::Mode::trackball;
     camCtrl.orbitDist(500.0f);
@@ -72,6 +87,9 @@ void App::draw(float time, float delta)
     xAxisArrow->draw();
     yAxisArrow->draw();
     zAxisArrow->draw();
+    textL->draw();
+    textA->draw();
+    textB->draw();
 }
 
 void App::event(const GLEQevent& event)
@@ -119,8 +137,5 @@ void App::onMouseButton(int button, bool pressed)
 void App::loadGamutMesh(const std::string& filepath)
 {
     gamutMeshes.emplace_back(std::make_shared<Gamut::GamutMesh>(filepath, program));
-    gamutMeshes.back()->transform.rotate(AngleAxisf(45, Vector3f::UnitZ()));
-    Vector3f centroid =
-        gamutMeshes[0]->bbMin + (gamutMeshes[0]->bbMax - gamutMeshes[0]->bbMin) / 2.0f;
-    gamutMeshes.back()->transform.translate(-centroid);
+    gamutMeshes.back()->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitZ()));
 }

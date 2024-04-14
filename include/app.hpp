@@ -16,7 +16,7 @@ class App
     Camera cam;
     CameraControl camCtrl;
     std::vector<std::shared_ptr<Gamut::GamutMesh>> gamutMeshes;
-    std::shared_ptr<Mesh> xAxisArrow, yAxisArrow, zAxisArrow;
+    std::shared_ptr<Mesh> xAxisArrow, yAxisArrow, zAxisArrow, textL, textA, textB;
     struct Mouse
     {
         Vector2f pos = Vector2f::Zero();
