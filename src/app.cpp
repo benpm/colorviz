@@ -21,11 +21,11 @@ App::App(Vector2f winSize)
 
     yAxisArrow =
         std::make_shared<Mesh>(std::filesystem::path("resources/models/arrow.obj"), program);
-    yAxisArrow->setVertexColor({ 0.0f, 1.0f, 0.0f });
+    yAxisArrow->setVertexColor({ 1.0f, 0.0f, 0.0f });
     yAxisArrow->transform.scale(25.f);
 
     xAxisArrow = std::make_shared<Mesh>(*yAxisArrow);
-    xAxisArrow->setVertexColor({ 1.0f, 0.0f, 0.0f });
+    xAxisArrow->setVertexColor({ 0.0f, 1.0f, 0.0f });
     xAxisArrow->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitZ()));
     xAxisArrow->transform.scale(25.f);
 
@@ -48,6 +48,16 @@ App::App(Vector2f winSize)
     textB->transform.translate(Vector3f{ 0.0f, 0.0f, 200.0f });
     textB->transform.scale(50.0f);
     textB->setVertexColor({ 1.0f, 1.0f, 1.0f });
+
+    textR = std::make_shared<Mesh>(std::filesystem::path("resources/models/R.obj"), program);
+    textG = std::make_shared<Mesh>(std::filesystem::path("resources/models/G.obj"), program);
+    textBcaps = std::make_shared<Mesh>(std::filesystem::path("resources/models/bCaps.obj"), program);
+    textR->transform = textL->transform;
+    textR->setVertexColor({ 1.0f, 1.0f, 1.0f });
+    textG->transform = textA->transform;
+    textG->setVertexColor({ 1.0f, 1.0f, 1.0f });
+    textBcaps->transform = textB->transform;
+    textBcaps->setVertexColor({ 1.0f, 1.0f, 1.0f });
 
     camCtrl.mode = CameraControl::Mode::trackball;
     camCtrl.orbitDist(500.0f);
@@ -128,9 +138,18 @@ void App::draw(float time, float delta)
     xAxisArrow->draw();
     yAxisArrow->draw();
     zAxisArrow->draw();
-    textL->draw();
-    textA->draw();
-    textB->draw();
+    if(this->spaceInerpolant == 0.0f)
+    {
+        textL->draw();
+        textA->draw();
+        textB->draw();
+    }
+    else if(this->spaceInerpolant == 1.0f)
+    {
+        textR->draw();
+        textG->draw();
+        textBcaps->draw();
+    }
 
     program.setUniform("spaceInterp", this->spaceInterpolant);
     for (int i = 0; i < gamuts.size(); i++) {
