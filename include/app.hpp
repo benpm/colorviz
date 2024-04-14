@@ -3,6 +3,9 @@
 #include <shader_program.hpp>
 #include <gleq.h>
 #include <GLFW/glfw3.h>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 #include <camera.hpp>
 #include <vecmath.hpp>
 #include <gamut.hpp>
@@ -34,13 +37,16 @@ class App
         float scroll = 0.0f;
         bool left = false;
         bool right = false;
+        bool disabled = false;
     } mouse;
+    std::vector<std::string> gamutFiles;
 
     App(Vector2f winSize);
     // Called before event processing
     void prepare();
     void update(float time, float delta);
     void draw(float time, float delta);
+    void updateGUI();
     void event(const GLEQevent& event);
     void onMouseButton(int button, bool pressed);
     void loadGamutMesh(const std::string& filepath);

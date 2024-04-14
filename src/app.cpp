@@ -14,8 +14,6 @@ App::App(Vector2f winSize)
         Shader(GL_FRAGMENT_SHADER, fs::path("resources/shaders/mesh.frag")),
     });
 
-    this->loadGamutMesh("resources/profiles/CIERGB.gam");
-    this->loadGamutMesh("resources/profiles/AdobeRGB1998.gam");
     this->transparentGamut = 0;
     this->gamutOpacity = 0.5f;
 
@@ -53,46 +51,64 @@ App::App(Vector2f winSize)
     camCtrl.orbitDist(500.0f);
     cam.pos = { 0.0f, 0.0f, 2.0f };
     cam.viewSize = winSize;
+
+    // Find gamut files in resources/profiles
+    for (const auto& entry : fs::directory_iterator("resources/profiles")) {
+        if (entry.path().extension() == ".gam") {
+            gamutFiles.push_back(entry.path().filename().string());
+        }
+    }
+
+    // Initialize ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForOpenGL(glfwGetCurrentContext(), true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+    ImGui::StyleColorsDark();
 }
 
 void App::prepare()
 {
     mouse.scroll = 0.0f;
+    mouse.disabled = false;
 }
 
 void App::update(float time, float delta)
 {
+    updateGUI();
+
     mouse.delta = mouse.pos - mouse.lastPos;
     mouse.dragDelta = Vector2f(mouse.dragStart - mouse.pos) * (float)mouse.left * 2.0f;
     mouse.dragDelta.y() *= -1.0f;
     mouse.lastPos = mouse.pos;
 
-    Vector2f screenDragDelta = mouse.delta * (float)mouse.left;
-    camCtrl.control(
-        screenDragDelta.cwiseQuotient(cam.viewSize), mouse.dragDelta.cwiseQuotient(cam.viewSize),
-        { 0.0f, 0.0f }
-    );
-    camCtrl.universalZoom(mouse.scroll);
-    camCtrl.update(cam, cam.viewSize);
+    if (!mouse.disabled) {
+        Vector2f screenDragDelta = mouse.delta * (float)mouse.left;
+        camCtrl.control(
+            screenDragDelta.cwiseQuotient(cam.viewSize),
+            mouse.dragDelta.cwiseQuotient(cam.viewSize), { 0.0f, 0.0f }
+        );
+        camCtrl.universalZoom(mouse.scroll);
+        camCtrl.update(cam, cam.viewSize);
+    }
 
     // Smoothly switch between color spaces
-    if(this->isAnimateSpace)
-    {
+    if (this->isAnimateSpace) {
         this->startTime = time;
         this->isAnimateSpace = false;
     }
     const float animationDuration = 1.0f;
-    if(this->startTime >= 0.0f)
-    {
+    if (this->startTime >= 0.0f) {
         float t = time - this->startTime;
-        float interpValue =  t / animationDuration;
-        if(interpValue > 1.0f)
-        {
+        float interpValue = t / animationDuration;
+        if (interpValue > 1.0f) {
             this->startTime = -1.0f;
             this->spaceInerpolant = this->targetSpaceInterpolant;
+        } else {
+            this->spaceInerpolant = lerp(
+                1.0f - this->targetSpaceInterpolant, this->targetSpaceInterpolant, interpValue
+            );
         }
-        else
-            this->spaceInerpolant = lerp(1.0f-this->targetSpaceInterpolant, this->targetSpaceInterpolant, interpValue);
     }
 
     program.setUniform("uTView", cam.getView());
@@ -112,26 +128,57 @@ void App::draw(float time, float delta)
     textA->draw();
     textB->draw();
 
-    if (gamutMeshes.empty()) {
-        return;
-    }
-
-    float extent = (this->gamutMeshes[0]->bbMax - this->gamutMeshes[0]->bbMin).minCoeff();
-    program.setUniform("uExtent", extent);
-    program.setUniform("spaceInterp", this->spaceInerpolant);
-    for (int i = 0; i < gamutMeshes.size(); i++) {
-        if (i == transparentGamut) {
-            continue;
+    if (!gamutMeshes.empty()) {
+        float extent = (this->gamutMeshes[0]->bbMax - this->gamutMeshes[0]->bbMin).minCoeff();
+        program.setUniform("uExtent", extent);
+        program.setUniform("spaceInterp", this->spaceInerpolant);
+        for (int i = 0; i < gamutMeshes.size(); i++) {
+            if (i == transparentGamut) {
+                continue;
+            }
+            gamutMeshes[i]->draw(gamutMeshes[i]->isWireframe);
         }
-        gamutMeshes[i]->draw(gamutMeshes[i]->isWireframe);
+
+        if (transparentGamut != -1) {
+            glEnable(GL_BLEND) $glChk;
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) $glChk;
+            program.setUniform("uOpacity", gamutOpacity);
+            gamutMeshes[transparentGamut]->draw(gamutMeshes[transparentGamut]->isWireframe);
+            glDisable(GL_BLEND) $glChk;
+        }
     }
 
-    if (transparentGamut != -1) {
-        glEnable(GL_BLEND) $glChk;
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) $glChk;
-        program.setUniform("uOpacity", gamutOpacity);
-        gamutMeshes[transparentGamut]->draw(gamutMeshes[transparentGamut]->isWireframe);
-        glDisable(GL_BLEND) $glChk;
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void App::updateGUI()
+{
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    {
+        ImGui::Begin(
+            "Controls", nullptr,
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
+        );
+        mouse.disabled |= ImGui::IsWindowHovered();
+        ImGui::SetWindowPos({ 4.0f, 4.0f }, ImGuiCond_FirstUseEver);
+        static std::unordered_set<size_t> selectedGamuts;
+        if (ImGui::BeginCombo("Gamuts", "(select gamuts)")) {
+            for (size_t i = 0; i < gamutFiles.size(); ++i) {
+                if (ImGui::Selectable(gamutFiles[i].c_str(), selectedGamuts.contains(i))) {
+                    if (selectedGamuts.contains(i)) {
+                        $warn("not implemented yet!");
+                    } else {
+                        loadGamutMesh("resources/profiles/" + gamutFiles[i]);
+                        selectedGamuts.insert(i);
+                    }
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::End();
     }
 }
 
