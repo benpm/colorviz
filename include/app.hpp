@@ -3,7 +3,6 @@
 #include <shader_program.hpp>
 #include <gleq.h>
 #include <GLFW/glfw3.h>
-
 #include <camera.hpp>
 #include <vecmath.hpp>
 #include <gamut.hpp>
@@ -16,7 +15,8 @@ class App
     ShaderProgram program;
     Camera cam;
     CameraControl camCtrl;
-    std::shared_ptr<GamutData> data;
+    std::vector<std::shared_ptr<Gamut::GamutMesh>> gamutMeshes;
+    std::shared_ptr<Mesh> xAxisArrow, yAxisArrow, zAxisArrow, textL, textA, textB;
     struct Mouse
     {
         Vector2f pos = Vector2f::Zero();
@@ -36,4 +36,5 @@ class App
     void draw(float time, float delta);
     void event(const GLEQevent& event);
     void onMouseButton(int button, bool pressed);
+    void loadGamutMesh(const std::string& filepath);
 };

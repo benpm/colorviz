@@ -1,5 +1,5 @@
 #include <app.hpp>
-
+#include <filesystem>
 App::App(Vector2f winSize)
 {
     glfwSwapInterval(1);
@@ -14,23 +14,38 @@ App::App(Vector2f winSize)
         Shader(GL_FRAGMENT_SHADER, fs::path("resources/shaders/mesh.frag")),
     });
 
-    data = readGamutData("resources/profiles/CIERGB.gam");
-    $debug(
-        "loaded gamut with {} vertices and {} faces", data->vertices.size(), data->triangles.size()
-    );
+    this->loadGamutMesh("resources/profiles/CIERGB.gam");
+    this->loadGamutMesh("resources/profiles/AdobeRGB1998.gam");
 
-    glGenVertexArrays(1, &vao) $glChk;
-    glBindVertexArray(vao) $glChk;
-    glGenBuffers(1, &vbo) $glChk;
-    gfx::setbuf(GL_ARRAY_BUFFER, vbo, data->vertices);
-    program.setVertexAttrib(vbo, "vPos", 3, GL_FLOAT, 0u, 0u);
+    yAxisArrow =
+        std::make_shared<Mesh>(std::filesystem::path("resources/models/arrow.obj"), program);
+    yAxisArrow->setVertexColor({ 0.0f, 1.0f, 0.0f });
+    yAxisArrow->transform.scale(25.f);
 
-    glGenBuffers(1, &vboColors) $glChk;
-    gfx::setbuf(GL_ARRAY_BUFFER, vboColors, data->colors);
-    program.setVertexAttrib(vboColors, "vColor", 3, GL_FLOAT, 0u, 0u);
+    xAxisArrow = std::make_shared<Mesh>(*yAxisArrow);
+    xAxisArrow->setVertexColor({ 1.0f, 0.0f, 0.0f });
+    xAxisArrow->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitZ()));
+    xAxisArrow->transform.scale(25.f);
 
-    glGenBuffers(1, &ebo) $glChk;
-    gfx::setbuf(GL_ELEMENT_ARRAY_BUFFER, ebo, data->triangles);
+    zAxisArrow = std::make_shared<Mesh>(*xAxisArrow);
+    zAxisArrow->setVertexColor({ 0.0f, 0.0f, 1.0f });
+    zAxisArrow->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitX()));
+    zAxisArrow->transform.scale(25.f);
+
+    textL = std::make_shared<Mesh>(std::filesystem::path("resources/models/L.obj"), program);
+    textA = std::make_shared<Mesh>(std::filesystem::path("resources/models/A.obj"), program);
+    textB = std::make_shared<Mesh>(std::filesystem::path("resources/models/B.obj"), program);
+
+    textL->transform.translate(Vector3f{ 0.0f, 200.0f, 0.0f });
+    textL->transform.scale(50.0f);
+    textL->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitX()));
+    textL->setVertexColor({ 1.0f, 1.0f, 1.0f });
+    textA->transform.translate(Vector3f{ -200.0f, 0.0f, 0.0f });
+    textA->transform.scale(50.0f);
+    textA->setVertexColor({ 1.0f, 1.0f, 1.0f });
+    textB->transform.translate(Vector3f{ 0.0f, 0.0f, 200.0f });
+    textB->transform.scale(50.0f);
+    textB->setVertexColor({ 1.0f, 1.0f, 1.0f });
 
     camCtrl.mode = CameraControl::Mode::trackball;
     camCtrl.orbitDist(500.0f);
@@ -57,11 +72,7 @@ void App::update(float time, float delta)
     );
     camCtrl.universalZoom(mouse.scroll);
     camCtrl.update(cam, cam.viewSize);
-    Transform3f model = Transform3f::Identity();
-    model.rotate(AngleAxisf(45, Vector3f::UnitZ()));
-    Vector3f centroid = data->bbMin + (data->bbMax - data->bbMin) / 2.0f;
-    model.translate(-centroid);
-    program.setUniform("uTModel", model.matrix());
+
     program.setUniform("uTView", cam.getView());
     program.setUniform("uTProj", cam.getProj());
 }
@@ -70,9 +81,15 @@ void App::draw(float time, float delta)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) $glChk;
     program.use();
-    glBindVertexArray(vao) $glChk;
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo) $glChk;
-    glDrawElements(GL_TRIANGLES, data->triangles.size() * 3, GL_UNSIGNED_INT, nullptr) $glChk;
+    for (auto& mesh : gamutMeshes) {
+        mesh->draw();
+    }
+    xAxisArrow->draw();
+    yAxisArrow->draw();
+    zAxisArrow->draw();
+    textL->draw();
+    textA->draw();
+    textB->draw();
 }
 
 void App::event(const GLEQevent& event)
@@ -115,4 +132,10 @@ void App::onMouseButton(int button, bool pressed)
     } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
         mouse.right = pressed;
     }
+}
+
+void App::loadGamutMesh(const std::string& filepath)
+{
+    gamutMeshes.emplace_back(std::make_shared<Gamut::GamutMesh>(filepath, program));
+    gamutMeshes.back()->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitZ()));
 }

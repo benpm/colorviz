@@ -33,6 +33,9 @@ set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 include_directories(${OPENGL_INCLUDE_DIR})
 
+# Dependency: tinyobjloader
+add_subdirectory(external/tinyobjloader)
+
 # Add sources, include dir, and create executable
 file(GLOB_RECURSE SOURCES src/*.cpp src/*.c)
 include_directories(include)
@@ -82,4 +85,5 @@ target_link_libraries(app PUBLIC
     spdlog
     Eigen3::Eigen
     imgui
+    tinyobjloader
 )
