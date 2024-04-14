@@ -159,6 +159,12 @@ void App::draw(float time, float delta)
         }
     }
 
+    if (intersectionMesh) {
+        program.setUniform("uOpacity", 1.0f);
+        program.setUniform("spaceInterp", 0.0f);
+        intersectionMesh->draw();
+    }
+
     if (transparentGamut != -1 && gamuts[transparentGamut].mesh) {
         std::shared_ptr<Gamut::GamutMesh>& gamut = gamuts[transparentGamut].mesh;
         program.setUniform("uOpacity", gamutOpacity);
@@ -198,6 +204,9 @@ void App::updateGUI()
         }
         if (ImGui::Button("Switch Colorspace")) {
             switchSpace();
+        }
+        if (gamuts[0].mesh && gamuts[1].mesh && ImGui::Button("Intersect")) {
+            intersectGamutMeshes(gamuts[0].mesh, gamuts[1].mesh);
         }
         ImGui::End();
     }
@@ -276,4 +285,35 @@ void App::switchSpace()
 {
     this->targetSpaceInterpolant = 1.0f - this->spaceInterpolant;
     this->isAnimateSpace = true;
+}
+
+void App::intersectGamutMeshes(
+    std::shared_ptr<Gamut::GamutMesh> a,
+    std::shared_ptr<Gamut::GamutMesh> b
+)
+{
+    SurfaceMesh mesh;
+    bool result = PMP::corefine_and_compute_union(a->surfaceMesh, b->surfaceMesh, mesh);
+    if (!result) {
+        $warn("Intersection failed");
+        return;
+    }
+    std::vector<Vector3f> vertices;
+    std::vector<Vector3f> colors;
+    for (const auto& v : mesh.vertices()) {
+        Point3 p = mesh.point(v);
+        vertices.push_back({ (float)p[0], (float)p[1], (float)p[2] });
+        colors.push_back(Gamut::LABtoRGB(vertices.back()));
+    }
+    std::vector<Vector3u> faces;
+    for (const auto& f : mesh.faces()) {
+        Vector3u face;
+        uint32_t i = 0;
+        for (auto v : mesh.vertices_around_face(mesh.halfedge(f))) {
+            face[i++] = v.idx();
+        }
+        faces.push_back(face);
+    }
+    intersectionMesh = std::make_shared<Mesh>(vertices, faces, colors, program);
+    intersectionMesh->transform = a->transform;
 }

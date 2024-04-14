@@ -25,7 +25,9 @@ class App
     float startTime = -1.0f;
     bool isAnimateSpace = false;
 
-    std::shared_ptr<Mesh> xAxisArrow, yAxisArrow, zAxisArrow, textL, textA, textB, textR, textG, textBcaps;
+    std::shared_ptr<Mesh> xAxisArrow, yAxisArrow, zAxisArrow, textL, textA, textB, textR, textG,
+        textBcaps;
+    std::shared_ptr<Mesh> intersectionMesh;
     struct Mouse
     {
         Vector2f pos = Vector2f::Zero();
@@ -56,4 +58,6 @@ class App
     void onMouseButton(int button, bool pressed);
     void loadGamutMesh(size_t idx);
     void switchSpace();
+    void
+    intersectGamutMeshes(std::shared_ptr<Gamut::GamutMesh> a, std::shared_ptr<Gamut::GamutMesh> b);
 };

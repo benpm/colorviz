@@ -4,6 +4,14 @@
 #include <vecmath.hpp>
 #include <unordered_map>
 #include <mesh.hpp>
+#include <CGAL/Simple_cartesian.h>
+#include <CGAL/Surface_mesh.h>
+#include <CGAL/polygon_mesh_processing.h>
+
+using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
+using Point3 = Kernel::Point_3;
+using SurfaceMesh = CGAL::Surface_mesh<Point3>;
+namespace PMP = CGAL::Polygon_mesh_processing;
 
 namespace Gamut
 {
@@ -71,6 +79,7 @@ namespace Gamut
        public:
         std::shared_ptr<GamutData> data;
         bool isWireframe = false;
+        SurfaceMesh surfaceMesh;
 
        public:
         GamutMesh(const std::string& filepath, ShaderProgram& program);

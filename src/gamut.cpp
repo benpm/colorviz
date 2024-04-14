@@ -60,8 +60,7 @@ std::vector<std::string> parseLine(const std::string& line)
     return tokens;
 }
 
-Gamut::GamutMesh::GamutMesh(const std::string& filepath, ShaderProgram& _program)
-    : Mesh(_program)
+Gamut::GamutMesh::GamutMesh(const std::string& filepath, ShaderProgram& _program) : Mesh(_program)
 {
     std::ifstream file(filepath);
     assert(file.is_open());
@@ -118,4 +117,27 @@ Gamut::GamutMesh::GamutMesh(const std::string& filepath, ShaderProgram& _program
     );
 
     this->generateBuffers();
+
+    std::vector<SurfaceMesh::vertex_index> vIndices;
+    for (Vector3f& vertex : vertices) {
+        vIndices.push_back(surfaceMesh.add_vertex(Point3(vertex.x(), vertex.y(), vertex.z())));
+    }
+
+    for (Vector3u& triangle : triangles) {
+        auto f = surfaceMesh.add_face(
+            vIndices[triangle.x()], vIndices[triangle.y()], vIndices[triangle.z()]
+        );
+        $assert(f != SurfaceMesh::null_face(), "Failed to add face to surface mesh");
+    }
+    assert(CGAL::is_closed(surfaceMesh));
+
+    PMP::remove_isolated_vertices(surfaceMesh);
+    PMP::duplicate_non_manifold_vertices(surfaceMesh);
+
+    PMP::experimental::remove_self_intersections(
+        surfaceMesh, CGAL::parameters::preserve_genus(false)
+    );
+
+    $assert(surfaceMesh.is_valid(), "Surface mesh is invalid");
+    $assert(!PMP::does_self_intersect(surfaceMesh), "Surface mesh self-intersects");
 }

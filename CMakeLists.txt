@@ -36,6 +36,9 @@ include_directories(${OPENGL_INCLUDE_DIR})
 # Dependency: tinyobjloader
 add_subdirectory(external/tinyobjloader)
 
+# Dependency: cgal
+find_package(CGAL REQUIRED)
+
 # Add sources, include dir, and create executable
 file(GLOB_RECURSE SOURCES src/*.cpp src/*.c)
 include_directories(include)
@@ -86,4 +89,5 @@ target_link_libraries(app PUBLIC
     Eigen3::Eigen
     imgui
     tinyobjloader
+    CGAL::CGAL
 )
