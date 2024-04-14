@@ -51,7 +51,8 @@ App::App(Vector2f winSize)
 
     textR = std::make_shared<Mesh>(std::filesystem::path("resources/models/R.obj"), program);
     textG = std::make_shared<Mesh>(std::filesystem::path("resources/models/G.obj"), program);
-    textBcaps = std::make_shared<Mesh>(std::filesystem::path("resources/models/bCaps.obj"), program);
+    textBcaps =
+        std::make_shared<Mesh>(std::filesystem::path("resources/models/bCaps.obj"), program);
     textR->transform = textL->transform;
     textR->setVertexColor({ 1.0f, 1.0f, 1.0f });
     textG->transform = textA->transform;
@@ -138,14 +139,11 @@ void App::draw(float time, float delta)
     xAxisArrow->draw();
     yAxisArrow->draw();
     zAxisArrow->draw();
-    if(this->spaceInerpolant == 0.0f)
-    {
+    if (this->spaceInterpolant == 0.0f) {
         textL->draw();
         textA->draw();
         textB->draw();
-    }
-    else if(this->spaceInerpolant == 1.0f)
-    {
+    } else if (this->spaceInterpolant == 1.0f) {
         textR->draw();
         textG->draw();
         textBcaps->draw();
