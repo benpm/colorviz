@@ -26,7 +26,7 @@ class App
     float startTime=-1.0f;
     bool isAnimateSpace = false;
 
-    std::shared_ptr<Mesh> xAxisArrow, yAxisArrow, zAxisArrow, textL, textA, textB;
+    std::shared_ptr<Mesh> xAxisArrow, yAxisArrow, zAxisArrow, textL, textA, textB, textR, textG, textBcaps;
     struct Mouse
     {
         Vector2f pos = Vector2f::Zero();
