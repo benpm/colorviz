@@ -7,7 +7,9 @@ App::App(Vector2f winSize)
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS) $glChk;
     glEnable(GL_DEPTH_TEST) $glChk;
     glFrontFace(GL_CCW) $glChk;
+    glCullFace(GL_BACK) $glChk;
     glEnable(GL_BLEND) $glChk;
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) $glChk;
 
     program.compile({
         Shader(GL_VERTEX_SHADER, fs::path("resources/shaders/mesh.vert")),
@@ -55,7 +57,7 @@ App::App(Vector2f winSize)
     // Find gamut files in resources/profiles
     for (const auto& entry : fs::directory_iterator("resources/profiles")) {
         if (entry.path().extension() == ".gam") {
-            gamutFiles.push_back(entry.path().filename().string());
+            gamuts.push_back({ entry.path(), nullptr });
         }
     }
 
@@ -76,6 +78,8 @@ void App::prepare()
 void App::update(float time, float delta)
 {
     updateGUI();
+
+    mouse.disabled = ImGui::GetIO().WantCaptureMouse;
 
     mouse.delta = mouse.pos - mouse.lastPos;
     mouse.dragDelta = Vector2f(mouse.dragStart - mouse.pos) * (float)mouse.left * 2.0f;
@@ -103,9 +107,9 @@ void App::update(float time, float delta)
         float interpValue = t / animationDuration;
         if (interpValue > 1.0f) {
             this->startTime = -1.0f;
-            this->spaceInerpolant = this->targetSpaceInterpolant;
+            this->spaceInterpolant = this->targetSpaceInterpolant;
         } else {
-            this->spaceInerpolant = lerp(
+            this->spaceInterpolant = lerp(
                 1.0f - this->targetSpaceInterpolant, this->targetSpaceInterpolant, interpValue
             );
         }
@@ -128,24 +132,22 @@ void App::draw(float time, float delta)
     textA->draw();
     textB->draw();
 
-    if (!gamutMeshes.empty()) {
-        float extent = (this->gamutMeshes[0]->bbMax - this->gamutMeshes[0]->bbMin).minCoeff();
-        program.setUniform("uExtent", extent);
-        program.setUniform("spaceInterp", this->spaceInerpolant);
-        for (int i = 0; i < gamutMeshes.size(); i++) {
-            if (i == transparentGamut) {
-                continue;
-            }
-            gamutMeshes[i]->draw(gamutMeshes[i]->isWireframe);
+    program.setUniform("spaceInterp", this->spaceInterpolant);
+    for (int i = 0; i < gamuts.size(); i++) {
+        if (i != transparentGamut && gamuts[i].mesh) {
+            std::shared_ptr<Gamut::GamutMesh>& gamut = gamuts[i].mesh;
+            float extent = (gamut->bbMax - gamut->bbMin).minCoeff();
+            program.setUniform("uExtent", extent);
+            gamut->draw(gamut->isWireframe);
         }
+    }
 
-        if (transparentGamut != -1) {
-            glEnable(GL_BLEND) $glChk;
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) $glChk;
-            program.setUniform("uOpacity", gamutOpacity);
-            gamutMeshes[transparentGamut]->draw(gamutMeshes[transparentGamut]->isWireframe);
-            glDisable(GL_BLEND) $glChk;
-        }
+    if (transparentGamut != -1 && gamuts[transparentGamut].mesh) {
+        std::shared_ptr<Gamut::GamutMesh>& gamut = gamuts[transparentGamut].mesh;
+        program.setUniform("uOpacity", gamutOpacity);
+        float extent = (gamut->bbMax - gamut->bbMin).minCoeff();
+        program.setUniform("uExtent", extent);
+        gamut->draw(gamut->isWireframe);
     }
 
     ImGui::Render();
@@ -157,28 +159,51 @@ void App::updateGUI()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    {
-        ImGui::Begin(
+
+    if (ImGui::Begin(
             "Controls", nullptr,
             ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
-        );
-        mouse.disabled |= ImGui::IsWindowHovered();
+        )) {
         ImGui::SetWindowPos({ 4.0f, 4.0f }, ImGuiCond_FirstUseEver);
-        static std::unordered_set<size_t> selectedGamuts;
         if (ImGui::BeginCombo("Gamuts", "(select gamuts)")) {
-            for (size_t i = 0; i < gamutFiles.size(); ++i) {
-                if (ImGui::Selectable(gamutFiles[i].c_str(), selectedGamuts.contains(i))) {
-                    if (selectedGamuts.contains(i)) {
-                        $warn("not implemented yet!");
+            for (size_t i = 0; i < gamuts.size(); ++i) {
+                if (ImGui::Selectable(
+                        gamuts[i].path.stem().string().c_str(), (bool)gamuts[i].mesh
+                    )) {
+                    if (gamuts[i].mesh) {
+                        gamuts[i].mesh.reset();
                     } else {
-                        loadGamutMesh("resources/profiles/" + gamutFiles[i]);
-                        selectedGamuts.insert(i);
+                        loadGamutMesh(i);
                     }
                 }
             }
             ImGui::EndCombo();
         }
+        if (ImGui::Button("Switch Colorspace")) {
+            switchSpace();
+        }
         ImGui::End();
+    }
+
+    // For each loaded gamut, show a window to control its settings
+    for (size_t i = 0; i < gamuts.size(); ++i) {
+        if (gamuts[i].mesh) {
+            bool close = false;
+            ImGui::Begin(
+                gamuts[i].path.stem().string().c_str(), &close,
+                ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize
+            );
+
+            ImGui::Checkbox("Wireframe", &gamuts[i].mesh->isWireframe);
+            bool setTransparent = (transparentGamut == i);
+            ImGui::Checkbox("Transparent", &setTransparent);
+            transparentGamut = setTransparent ? i : transparentGamut;
+
+            ImGui::End();
+            if (close) {
+                gamuts[i].mesh.reset();
+            }
+        }
     }
 }
 
@@ -188,9 +213,6 @@ void App::event(const GLEQevent& event)
         case GLEQ_KEY_PRESSED:
             if (event.keyboard.key == GLFW_KEY_ESCAPE) {
                 doExit = true;
-            }
-            if (event.keyboard.key == GLFW_KEY_SPACE) {
-                switchSpace();
             }
             break;
         case GLEQ_WINDOW_RESIZED:
@@ -227,14 +249,14 @@ void App::onMouseButton(int button, bool pressed)
     }
 }
 
-void App::loadGamutMesh(const std::string& filepath)
+void App::loadGamutMesh(size_t idx)
 {
-    gamutMeshes.emplace_back(std::make_shared<Gamut::GamutMesh>(filepath, program));
-    gamutMeshes.back()->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitZ()));
+    gamuts[idx].mesh = std::make_shared<Gamut::GamutMesh>(gamuts[idx].path.string(), program);
+    gamuts[idx].mesh->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitZ()));
 }
 
 void App::switchSpace()
 {
-    this->targetSpaceInterpolant = 1.0f - this->spaceInerpolant;
+    this->targetSpaceInterpolant = 1.0f - this->spaceInterpolant;
     this->isAnimateSpace = true;
 }

@@ -18,12 +18,11 @@ class App
     ShaderProgram program;
     Camera cam;
     CameraControl camCtrl;
-    std::vector<std::shared_ptr<Gamut::GamutMesh>> gamutMeshes;
-    uint32_t transparentGamut = -1;
+    int transparentGamut = -1;
     float gamutOpacity = 1.0f;
 
-    float spaceInerpolant = 0.0f,targetSpaceInterpolant = 1.0;
-    float startTime=-1.0f;
+    float spaceInterpolant = 0.0f, targetSpaceInterpolant = 1.0;
+    float startTime = -1.0f;
     bool isAnimateSpace = false;
 
     std::shared_ptr<Mesh> xAxisArrow, yAxisArrow, zAxisArrow, textL, textA, textB;
@@ -39,7 +38,13 @@ class App
         bool right = false;
         bool disabled = false;
     } mouse;
-    std::vector<std::string> gamutFiles;
+
+    struct GamutInfo
+    {
+        fs::path path;
+        std::shared_ptr<Gamut::GamutMesh> mesh;
+    };
+    std::vector<GamutInfo> gamuts;
 
     App(Vector2f winSize);
     // Called before event processing
@@ -49,6 +54,6 @@ class App
     void updateGUI();
     void event(const GLEQevent& event);
     void onMouseButton(int button, bool pressed);
-    void loadGamutMesh(const std::string& filepath);
+    void loadGamutMesh(size_t idx);
     void switchSpace();
 };
