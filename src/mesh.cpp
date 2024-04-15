@@ -26,23 +26,28 @@ Mesh::Mesh(const std::filesystem::path& modelPath, ShaderProgram& _program) : pr
         }
         // fill triangles
         for (size_t i = 0; i < shape.mesh.num_face_vertices.size(); i++) {
-            Vector3u triangle = { static_cast<unsigned int>(shape.mesh.indices[3*i + 0].vertex_index),
-                                  static_cast<unsigned int>(shape.mesh.indices[3*i + 1].vertex_index),
-                                  static_cast<unsigned int>(shape.mesh.indices[3*i + 2].vertex_index
-                                  ) };
+            Vector3u triangle = {
+                static_cast<unsigned int>(shape.mesh.indices[3 * i + 0].vertex_index),
+                static_cast<unsigned int>(shape.mesh.indices[3 * i + 1].vertex_index),
+                static_cast<unsigned int>(shape.mesh.indices[3 * i + 2].vertex_index)
+            };
             this->triangles.push_back(triangle);
         }
     }
     this->generateBuffers();
     $info(
-        "Loaded model from {} with {} vertices and {} triangles", modelPath.string(), this->vertices.size(), this->triangles.size()
+        "Loaded model from {} with {} vertices and {} triangles", modelPath.string(),
+        this->vertices.size(), this->triangles.size()
     );
 }
 
-Mesh::Mesh(const std::vector<Vector3f>& _vertices,
+Mesh::Mesh(
+    const std::vector<Vector3f>& _vertices,
     const std::vector<Vector3u>& _triangles,
     const std::vector<Vector3f>& _colors,
-    ShaderProgram& _program):Mesh(_program)
+    ShaderProgram& _program
+)
+    : Mesh(_program)
 {
     this->vertices = _vertices;
     this->triangles = _triangles;
@@ -64,8 +69,8 @@ void Mesh::setVertexColor(const Vector3f& color)
         c = color;
     });
     glBindBuffer(GL_ARRAY_BUFFER, this->vboColors) $glChk;
-    glBufferSubData(GL_ARRAY_BUFFER, 0, this->colors.size() * sizeof(Vector3f), this->colors.data()) $glChk;
-
+    glBufferSubData(GL_ARRAY_BUFFER, 0, this->colors.size() * sizeof(Vector3f), this->colors.data())
+        $glChk;
 }
 
 void Mesh::generateBuffers()
@@ -86,10 +91,15 @@ void Mesh::generateBuffers()
 
 void Mesh::draw(bool isWireframe)
 {
+    if (!this->isActive) {
+        return;
+    }
     program.setUniform("uTModel", this->transform.matrix());
     glBindVertexArray(vao) $glChk;
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo) $glChk;
-    glDrawElements(isWireframe ? GL_LINES : GL_TRIANGLES, this->triangles.size() * 3, GL_UNSIGNED_INT, nullptr) $glChk;
+    glDrawElements(
+        isWireframe ? GL_LINES : GL_TRIANGLES, this->triangles.size() * 3, GL_UNSIGNED_INT, nullptr
+    ) $glChk;
 }
 
 Mesh::~Mesh()

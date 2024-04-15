@@ -7,6 +7,7 @@ class Mesh
 {
    public:
     std::string label;
+    bool isActive = true;
     ShaderProgram& program;
     Vector3f bbMin, bbMax;
     std::vector<Vector3f> vertices;

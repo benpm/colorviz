@@ -16,7 +16,7 @@ App::App(Vector2f winSize)
         Shader(GL_FRAGMENT_SHADER, fs::path("resources/shaders/mesh.frag")),
     });
 
-    this->transparentGamut = 0;
+    this->transparentGamut = -1;
     this->gamutOpacity = 0.5f;
 
     yAxisArrow =
@@ -35,8 +35,8 @@ App::App(Vector2f winSize)
     zAxisArrow->transform.scale(25.f);
 
     textL = std::make_shared<Mesh>(std::filesystem::path("resources/models/L.obj"), program);
-    textA = std::make_shared<Mesh>(std::filesystem::path("resources/models/A.obj"), program);
-    textB = std::make_shared<Mesh>(std::filesystem::path("resources/models/B.obj"), program);
+    textA = std::make_shared<Mesh>(std::filesystem::path("resources/models/a.obj"), program);
+    textB = std::make_shared<Mesh>(std::filesystem::path("resources/models/b.obj"), program);
 
     textL->transform.translate(Vector3f{ 0.0f, 200.0f, 0.0f });
     textL->transform.scale(50.0f);
@@ -211,26 +211,45 @@ void App::updateGUI()
         ImGui::End();
     }
 
-    // For each loaded gamut, show a window to control its settings
-    for (size_t i = 0; i < gamuts.size(); ++i) {
-        if (gamuts[i].mesh) {
-            bool close = false;
-            ImGui::Begin(
-                gamuts[i].path.stem().string().c_str(), &close,
-                ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize
-            );
-
-            ImGui::Checkbox("Wireframe", &gamuts[i].mesh->isWireframe);
-            bool setTransparent = (transparentGamut == i);
-            ImGui::Checkbox("Transparent", &setTransparent);
-            transparentGamut = setTransparent ? i : transparentGamut;
-
-            ImGui::End();
-            if (close) {
-                gamuts[i].mesh.reset();
+    ImGui::Begin(
+        "Inspector", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize
+    );
+    if (ImGui::BeginTable(
+            "Gamuts", 4,
+            ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg
+        )) {
+        ImGui::TableSetupColumn("Visible", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+        ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+        ImGui::TableSetupColumn("Wireframe", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+        ImGui::TableSetupColumn("Transparent", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+        ImGui::TableHeadersRow();
+        for (size_t i = 0; i < gamuts.size(); ++i) {
+            if (gamuts[i].mesh) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Checkbox(
+                    ("##visible" + std::to_string(i)).c_str(), &gamuts[i].mesh->isActive
+                );
+                ImGui::TableNextColumn();
+                ImGui::Text(gamuts[i].path.stem().string().c_str());
+                ImGui::TableNextColumn();
+                bool prevWireframe = gamuts[i].mesh->isWireframe;
+                ImGui::Checkbox(
+                    ("##wireframe" + std::to_string(i)).c_str(), &gamuts[i].mesh->isWireframe
+                );
+                ImGui::TableNextColumn();
+                bool setTransparent = (transparentGamut == i);
+                bool prevTransparent = setTransparent;
+                ImGui::Checkbox(("##transparent" + std::to_string(i)).c_str(), &setTransparent);
+                transparentGamut = setTransparent ? i : transparentGamut;
+                if (prevTransparent && !setTransparent) {
+                    transparentGamut = -1;
+                }
             }
         }
+        ImGui::EndTable();
     }
+    ImGui::End();
 }
 
 void App::event(const GLEQevent& event)
