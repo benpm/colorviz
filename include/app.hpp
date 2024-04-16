@@ -27,7 +27,8 @@ class App
 
     std::shared_ptr<Mesh> xAxisArrow, yAxisArrow, zAxisArrow, textL, textA, textB, textR, textG,
         textBcaps;
-    std::shared_ptr<Mesh> intersectionMesh;
+    uint8_t intersectionHash = 0;  // each bit represent which gamut is intersecting
+    std::unordered_map<uint8_t, std::shared_ptr<Mesh>> intersectionMeshes;
     struct Mouse
     {
         Vector2f pos = Vector2f::Zero();
@@ -41,12 +42,8 @@ class App
         bool disabled = false;
     } mouse;
 
-    struct GamutInfo
-    {
-        fs::path path;
-        std::shared_ptr<Gamut::GamutMesh> mesh;
-    };
-    std::vector<GamutInfo> gamuts;
+    std::unordered_set<fs::path> importedGamuts;
+    std::vector<std::shared_ptr<Gamut::GamutMesh>> gamuts;
 
     App(Vector2f winSize);
     // Called before event processing
@@ -56,7 +53,7 @@ class App
     void updateGUI();
     void event(const GLEQevent& event);
     void onMouseButton(int button, bool pressed);
-    void loadGamutMesh(size_t idx);
+    void loadGamutMesh(const fs::path& filepath);
     void switchSpace();
     void
     intersectGamutMeshes(std::shared_ptr<Gamut::GamutMesh> a, std::shared_ptr<Gamut::GamutMesh> b);

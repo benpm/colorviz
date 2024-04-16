@@ -65,13 +65,6 @@ App::App(Vector2f winSize)
     cam.pos = { 0.0f, 0.0f, 2.0f };
     cam.viewSize = winSize;
 
-    // Find gamut files in resources/profiles
-    for (const auto& entry : fs::directory_iterator("resources/profiles")) {
-        if (entry.path().extension() == ".gam") {
-            gamuts.push_back({ entry.path(), nullptr });
-        }
-    }
-
     // Initialize ImGui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -151,26 +144,21 @@ void App::draw(float time, float delta)
 
     program.setUniform("spaceInterp", this->spaceInterpolant);
     for (int i = 0; i < gamuts.size(); i++) {
-        if (i != transparentGamut && gamuts[i].mesh) {
-            std::shared_ptr<Gamut::GamutMesh>& gamut = gamuts[i].mesh;
-            float extent = (gamut->bbMax - gamut->bbMin).minCoeff();
-            program.setUniform("uExtent", extent);
-            gamut->draw(gamut->isWireframe);
+        if (i != transparentGamut) {
+
+            gamuts[i]->draw(gamuts[i]->isWireframe);
         }
     }
 
-    if (intersectionMesh) {
+    if (intersectionHash!=0) {
         program.setUniform("uOpacity", 1.0f);
         program.setUniform("spaceInterp", 0.0f);
-        intersectionMesh->draw();
+        intersectionMeshes[intersectionHash]->draw();
     }
 
-    if (transparentGamut != -1 && gamuts[transparentGamut].mesh) {
-        std::shared_ptr<Gamut::GamutMesh>& gamut = gamuts[transparentGamut].mesh;
+    if (transparentGamut != -1 && gamuts[transparentGamut]) {
         program.setUniform("uOpacity", gamutOpacity);
-        float extent = (gamut->bbMax - gamut->bbMin).minCoeff();
-        program.setUniform("uExtent", extent);
-        gamut->draw(gamut->isWireframe);
+        gamuts[transparentGamut]->draw(gamuts[transparentGamut]->isWireframe);
     }
 
     ImGui::Render();
@@ -183,37 +171,39 @@ void App::updateGUI()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    if (ImGui::Begin(
-            "Controls", nullptr,
-            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
-        )) {
-        ImGui::SetWindowPos({ 4.0f, 4.0f }, ImGuiCond_FirstUseEver);
-        if (ImGui::BeginCombo("Gamuts", "(select gamuts)")) {
-            for (size_t i = 0; i < gamuts.size(); ++i) {
-                if (ImGui::Selectable(
-                        gamuts[i].path.stem().string().c_str(), (bool)gamuts[i].mesh
-                    )) {
-                    if (gamuts[i].mesh) {
-                        gamuts[i].mesh.reset();
-                    } else {
-                        loadGamutMesh(i);
-                    }
+    if (ImGui::Begin("Controls", nullptr,
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)) 
+
+    ImGui::SetWindowPos({ 4.0f, 4.0f }, ImGuiCond_FirstUseEver);
+    if (ImGui::BeginCombo("Gamuts", "(select gamuts)")) {
+        std::vector<fs::path> gamutPaths;
+        // Find gamut files in resources/profiles
+        for (const auto& entry : fs::directory_iterator("resources/profiles")) {
+            if (entry.path().extension() == ".gam") {
+                gamutPaths.push_back(entry.path());
+            }
+        }
+        for (size_t i = 0; i < gamutPaths.size(); ++i) {
+            if (ImGui::Selectable(
+                    gamutPaths[i].stem().string().c_str(), importedGamuts.contains(gamutPaths[i])
+                )) {
+                if (!importedGamuts.contains(gamutPaths[i])) {
+                    importedGamuts.insert(gamutPaths[i]);
+                    loadGamutMesh(gamutPaths[i]);
                 }
             }
-            ImGui::EndCombo();
         }
-        if (ImGui::Button("Switch Colorspace")) {
-            switchSpace();
-        }
-        if (gamuts[0].mesh && gamuts[1].mesh && ImGui::Button("Intersect")) {
-            intersectGamutMeshes(gamuts[0].mesh, gamuts[1].mesh);
-        }
-        ImGui::End();
+        ImGui::EndCombo();
     }
+    if (ImGui::Button("Switch Colorspace")) {
+        switchSpace();
+    }
+    // if (gamuts[0].mesh && gamuts[1].mesh && ImGui::Button("Intersect")) {
+    //     intersectGamutMeshes(gamuts[0].mesh, gamuts[1].mesh);
+    // }
+   
+    
 
-    ImGui::Begin(
-        "Inspector", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize
-    );
     if (ImGui::BeginTable(
             "Gamuts", 4,
             ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg
@@ -223,29 +213,25 @@ void App::updateGUI()
         ImGui::TableSetupColumn("Wireframe", ImGuiTableColumnFlags_WidthFixed, 100.0f);
         ImGui::TableSetupColumn("Transparent", ImGuiTableColumnFlags_WidthFixed, 100.0f);
         ImGui::TableHeadersRow();
-        for (size_t i = 0; i < gamuts.size(); ++i) {
-            if (gamuts[i].mesh) {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::Checkbox(
-                    ("##visible" + std::to_string(i)).c_str(), &gamuts[i].mesh->isActive
-                );
-                ImGui::TableNextColumn();
-                ImGui::Text(gamuts[i].path.stem().string().c_str());
-                ImGui::TableNextColumn();
-                bool prevWireframe = gamuts[i].mesh->isWireframe;
-                ImGui::Checkbox(
-                    ("##wireframe" + std::to_string(i)).c_str(), &gamuts[i].mesh->isWireframe
-                );
-                ImGui::TableNextColumn();
-                bool setTransparent = (transparentGamut == i);
-                bool prevTransparent = setTransparent;
-                ImGui::Checkbox(("##transparent" + std::to_string(i)).c_str(), &setTransparent);
-                transparentGamut = setTransparent ? i : transparentGamut;
-                if (prevTransparent && !setTransparent) {
-                    transparentGamut = -1;
-                }
-            }
+        for (size_t i = 0; i < gamuts.size(); ++i) {           
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::Checkbox(("##visible" + std::to_string(i)).c_str(), &gamuts[i]->isActive);
+            ImGui::TableNextColumn();
+            ImGui::Text(gamuts[i]->label.c_str());
+            ImGui::TableNextColumn();
+            bool prevWireframe = gamuts[i]->isWireframe;
+            ImGui::Checkbox(
+                ("##wireframe" + std::to_string(i)).c_str(), &gamuts[i]->isWireframe
+            );
+            ImGui::TableNextColumn();
+            bool setTransparent = (transparentGamut == i);
+            bool prevTransparent = setTransparent;
+            ImGui::Checkbox(("##transparent" + std::to_string(i)).c_str(), &setTransparent);
+            transparentGamut = setTransparent ? i : transparentGamut;
+            if (prevTransparent && !setTransparent) {
+                transparentGamut = -1;
+            }            
         }
         ImGui::EndTable();
     }
@@ -294,10 +280,16 @@ void App::onMouseButton(int button, bool pressed)
     }
 }
 
-void App::loadGamutMesh(size_t idx)
+void App::loadGamutMesh(const fs::path& filepath)
 {
-    gamuts[idx].mesh = std::make_shared<Gamut::GamutMesh>(gamuts[idx].path.string(), program);
-    gamuts[idx].mesh->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitZ()));
+    gamuts.push_back(std::make_shared<Gamut::GamutMesh>(filepath.string(), program));
+    gamuts.back()->label = filepath.stem().string();
+    gamuts.back()->transform.rotate(AngleAxisf(pi / 2.0f, Vector3f::UnitZ()));
+    if (gamuts.size() == 1) {
+        float extent = (gamuts[0]->bbMax - gamuts[0]->bbMin).minCoeff();
+        program.use();
+        program.setUniform("uExtent", extent);
+    }
 }
 
 void App::switchSpace()
@@ -333,6 +325,6 @@ void App::intersectGamutMeshes(
         }
         faces.push_back(face);
     }
-    intersectionMesh = std::make_shared<Mesh>(vertices, faces, colors, program);
-    intersectionMesh->transform = a->transform;
+    intersectionMeshes[intersectionHash] = std::make_shared<Mesh>(vertices, faces, colors, program);
+    intersectionMeshes[intersectionHash]->transform = a->transform;
 }
