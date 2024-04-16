@@ -1,5 +1,8 @@
-# colorviz
-visualizing color gamuts
+# GamutViz
+
+![](./banner.png)
+
+Visualizing color gamuts. The following is some information we used:
 
 - https://sourceforge.net/projects/sampleicc/
 - https://sourceforge.net/projects/lcms/
