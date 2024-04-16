@@ -2,6 +2,14 @@
 #include <util.hpp>
 #include <vecmath.hpp>
 #include <shader_program.hpp>
+#include <CGAL/Simple_cartesian.h>
+#include <CGAL/Surface_mesh.h>
+#include <CGAL/polygon_mesh_processing.h>
+
+using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
+using Point3 = Kernel::Point_3;
+using SurfaceMesh = CGAL::Surface_mesh<Point3>;
+namespace PMP = CGAL::Polygon_mesh_processing;
 
 class Mesh
 {
@@ -14,6 +22,7 @@ class Mesh
     std::vector<Vector3f> colors;
     std::vector<Vector3u> triangles;
     Transform3f transform = Transform3f::Identity();
+    SurfaceMesh surfaceMesh;
 
    private:
     GLuint vao, vbo, ebo, vboColors;

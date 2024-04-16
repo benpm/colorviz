@@ -21,7 +21,7 @@ class App
     int transparentGamut = -1;
     float gamutOpacity = 1.0f;
 
-    float spaceInterpolant = 0.0f, targetSpaceInterpolant = 1.0;
+    float spaceInterpolant = 0.0f, targetSpaceInterpolant = 0.0;
     float startTime = -1.0f;
     bool isAnimateSpace = false;
 
@@ -55,6 +55,15 @@ class App
     void onMouseButton(int button, bool pressed);
     void loadGamutMesh(const fs::path& filepath);
     void switchSpace();
-    void
-    intersectGamutMeshes(std::shared_ptr<Gamut::GamutMesh> a, std::shared_ptr<Gamut::GamutMesh> b);
+    void intersectTwoMeshes(
+        std::shared_ptr<Mesh> a,
+        std::shared_ptr<Mesh> b,
+        uint8_t hash
+    );
+    void generateIntersectionMesh();
+    // if no gamuts are set for intersection, or only one gamut is set, return false
+    bool isValidIntersectionHash()
+    {
+        return (intersectionHash && (intersectionHash & (intersectionHash - 1)));
+    }
 };

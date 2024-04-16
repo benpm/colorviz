@@ -150,9 +150,7 @@ void App::draw(float time, float delta)
         }
     }
 
-    if (intersectionHash != 0) {
-        program.setUniform("uOpacity", 1.0f);
-        program.setUniform("spaceInterp", 0.0f);
+    if (isValidIntersectionHash() && intersectionMeshes.contains(intersectionHash)) {
         intersectionMeshes[intersectionHash]->draw();
     }
 
@@ -201,9 +199,17 @@ void App::updateGUI()
 
     int colorSpace = this->targetSpaceInterpolant;
     int prevColorSpace = colorSpace;
+    // Disable color space selection while animating
+    if (this->startTime >= 0.0f) {
+        ImGui::BeginDisabled();
+    }
     ImGui::RadioButton("LAB", &colorSpace, 0);
     ImGui::SameLine();
     ImGui::RadioButton("RGB", &colorSpace, 1);
+    if (this->startTime >= 0.0f) {
+        ImGui::EndDisabled();
+    }
+
     if (prevColorSpace != colorSpace) {
         switchSpace();
     }
@@ -211,18 +217,16 @@ void App::updateGUI()
     ImGui::SliderFloat("Gamut Opacity", &gamutOpacity, 0.0f, 1.0f);
 
     ImGui::Separator();
-    // if (gamuts[0].mesh && gamuts[1].mesh && ImGui::Button("Intersect")) {
-    //     intersectGamutMeshes(gamuts[0].mesh, gamuts[1].mesh);
-    // }
 
     if (ImGui::BeginTable(
-            "Gamuts", 4,
+            "Gamuts", 5,
             ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_RowBg
         )) {
         ImGui::TableSetupColumn("Visible", ImGuiTableColumnFlags_WidthFixed, 60.0f);
         ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 100.0f);
         ImGui::TableSetupColumn("Wireframe", ImGuiTableColumnFlags_WidthFixed, 60.0f);
         ImGui::TableSetupColumn("Transparent", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+        ImGui::TableSetupColumn("Intersect", ImGuiTableColumnFlags_WidthFixed, 80.0f);
         ImGui::TableHeadersRow();
         for (size_t i = 0; i < gamuts.size(); ++i) {
             ImGui::TableNextRow();
@@ -238,9 +242,13 @@ void App::updateGUI()
             bool prevTransparent = setTransparent;
             ImGui::Checkbox(("##transparent" + std::to_string(i)).c_str(), &setTransparent);
             transparentGamut = setTransparent ? i : transparentGamut;
-            if (prevTransparent && !setTransparent) {
-                transparentGamut = -1;
-            }
+            transparentGamut = prevTransparent && !setTransparent ? -1 : transparentGamut;
+            ImGui::TableNextColumn();
+            bool isIntersect = (intersectionHash & (1 << i)) != 0;
+            ImGui::Checkbox(("##intersect" + std::to_string(i)).c_str(), &isIntersect);
+            intersectionHash =
+                isIntersect ? intersectionHash | (1 << i) : intersectionHash & ~(1 << i);
+            generateIntersectionMesh();
         }
         ImGui::EndTable();
     }
@@ -302,9 +310,10 @@ void App::switchSpace()
     this->isAnimateSpace = true;
 }
 
-void App::intersectGamutMeshes(
-    std::shared_ptr<Gamut::GamutMesh> a,
-    std::shared_ptr<Gamut::GamutMesh> b
+void App::intersectTwoMeshes(
+    std::shared_ptr<Mesh> a,
+    std::shared_ptr<Mesh> b,
+    uint8_t hash
 )
 {
     SurfaceMesh mesh;
@@ -329,6 +338,36 @@ void App::intersectGamutMeshes(
         }
         faces.push_back(face);
     }
-    intersectionMeshes[intersectionHash] = std::make_shared<Mesh>(vertices, faces, colors, program);
-    intersectionMeshes[intersectionHash]->transform = a->transform;
+    intersectionMeshes[hash] = std::make_shared<Mesh>(vertices, faces, colors, program);
+    intersectionMeshes[hash]->transform = a->transform;
+}
+
+void App::generateIntersectionMesh()
+{
+    // if no gamuts are set, or only one gamut is set, return
+    if (!isValidIntersectionHash() || gamuts.size() == 0) {
+        return;
+    }
+    if (intersectionMeshes.contains(intersectionHash)) {
+        return;
+    }
+    std::vector<size_t> activeGamuts;
+    for (size_t i = 0; i < gamuts.size(); ++i) {
+        if (intersectionHash & (1 << i)) {
+            activeGamuts.push_back(i);
+        }
+    }
+    if(activeGamuts.size() == 3) {
+        $info("Intersecting 3 gamuts");
+    }
+    uint8_t currentHash = 0, prevHash = (1 << activeGamuts[0]);
+    std::shared_ptr<Mesh> prevMesh = gamuts[activeGamuts[0]];
+    for (size_t i = 0; i < activeGamuts.size()-1; ++i) {
+        currentHash = prevHash | (1 << activeGamuts[i + 1]);
+        if (!intersectionMeshes.contains(currentHash)) {
+            intersectTwoMeshes(prevMesh, gamuts[activeGamuts[i + 1]], currentHash);
+        }
+        prevMesh = intersectionMeshes[currentHash];
+        prevHash = currentHash;
+    }
 }
